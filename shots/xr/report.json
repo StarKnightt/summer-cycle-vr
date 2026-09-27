@@ -48,11 +48,11 @@
           true,
           true
         ],
-        "fps": 354.2288557213933,
+        "fps": 346.2686567164178,
         "calls": 307,
         "shadowCalls": 0,
         "level": "L0",
-        "levelFps": 88,
+        "levelFps": 0,
         "target": 72
       }
     },
@@ -67,7 +67,7 @@
           true,
           true
         ],
-        "steer": -0.024067953116744183,
+        "steer": -0.004847114635054122,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -76,11 +76,11 @@
           true,
           true
         ],
-        "fps": 324.3670886078341,
-        "calls": 232,
+        "fps": 348.72201307630314,
+        "calls": 309,
         "shadowCalls": 0,
-        "level": "L1",
-        "levelFps": 82,
+        "level": "L0",
+        "levelFps": 100,
         "target": 72
       }
     },
@@ -90,12 +90,12 @@
       "detail": {
         "presenting": true,
         "step": "brake",
-        "dist": 16,
+        "dist": 15,
         "held": [
           true,
           true
         ],
-        "steer": -0.024067953199451084,
+        "steer": -0.004847114698591026,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -104,21 +104,21 @@
           true,
           true
         ],
-        "fps": 103.15413608418652,
-        "calls": 214,
+        "fps": 380.49940546995987,
+        "calls": 297,
         "shadowCalls": 0,
-        "level": "L3",
-        "levelFps": 30,
+        "level": "L0",
+        "levelFps": 103,
         "target": 72,
-        "speed": 4.114594589049874
+        "speed": 4.0988442763732715
       }
     },
     {
       "name": "turning the bars left steers left",
       "pass": true,
       "detail": {
-        "steer": 0.6136101926734228,
-        "yawRate": 0.26780527305032603
+        "steer": 0.49120758080854154,
+        "yawRate": 0.1860170135776083
       }
     },
     {
@@ -126,7 +126,7 @@
       "pass": true,
       "detail": {
         "brake": 1,
-        "speed": 0.05723999999730732
+        "speed": 0.016200000001335865
       }
     },
     {
@@ -135,12 +135,12 @@
       "detail": {
         "presenting": true,
         "step": "sun",
-        "dist": 35,
+        "dist": 33,
         "held": [
           true,
           true
         ],
-        "steer": 0.5271436777200799,
+        "steer": 0.40119190689724404,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -149,11 +149,11 @@
           true,
           true
         ],
-        "fps": 93.65853658536582,
-        "calls": 208,
+        "fps": 334.1288782823659,
+        "calls": 289,
         "shadowCalls": 0,
-        "level": "L3",
-        "levelFps": 20,
+        "level": "L0",
+        "levelFps": 99,
         "target": 72
       }
     },
@@ -163,25 +163,25 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 64,
+        "dist": 61,
         "held": [
           true,
           false
         ],
-        "steer": 0.1834939922879787,
+        "steer": 0.09492326025243494,
         "brake": 0,
         "paused": false,
         "menu": false,
-        "sun": 2.2710297250376046,
+        "sun": 2.238655985148619,
         "hands": [
           true,
           true
         ],
-        "fps": 379.8480607748413,
-        "calls": 230,
+        "fps": 384.99702321860815,
+        "calls": 289,
         "shadowCalls": 0,
-        "level": "L2",
-        "levelFps": 93,
+        "level": "L0",
+        "levelFps": 103,
         "target": 72
       }
     },
@@ -191,25 +191,25 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 85,
+        "dist": 83,
         "held": [
           false,
           true
         ],
-        "steer": -0.01106813031910535,
+        "steer": -0.027511210808335424,
         "brake": 0,
         "paused": false,
         "menu": true,
-        "sun": 2.275593288519805,
+        "sun": 2.2388065060643343,
         "hands": [
           true,
           true
         ],
-        "fps": 400.1584786047976,
-        "calls": 220,
+        "fps": 386.9938160790597,
+        "calls": 300,
         "shadowCalls": 0,
-        "level": "L2",
-        "levelFps": 185,
+        "level": "L0",
+        "levelFps": 108,
         "target": 72
       }
     },
@@ -219,25 +219,25 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 91,
+        "dist": 89,
         "held": [
           false,
           false
         ],
-        "steer": -4.1538722231661555e-8,
+        "steer": -1.4992167586375905e-8,
         "brake": 0,
         "paused": true,
         "menu": true,
-        "sun": 2.275593288519805,
+        "sun": 2.2388065060643343,
         "hands": [
           true,
           true
         ],
-        "fps": 400.07922360981587,
-        "calls": 220,
+        "fps": 380.650277557213,
+        "calls": 298,
         "shadowCalls": 0,
-        "level": "L2",
-        "levelFps": 183,
+        "level": "L0",
+        "levelFps": 92,
         "target": 72
       }
     },
@@ -247,25 +247,25 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 93,
+        "dist": 91,
         "held": [
           true,
           true
         ],
-        "steer": -0.0007794889356419145,
+        "steer": -0.0036635122169190724,
         "brake": 0,
         "paused": false,
         "menu": false,
-        "sun": 2.275593288519805,
+        "sun": 2.2388065060643343,
         "hands": [
           true,
           true
         ],
-        "fps": 399.92001599709835,
-        "calls": 222,
+        "fps": 383.9232153572145,
+        "calls": 301,
         "shadowCalls": 0,
-        "level": "L2",
-        "levelFps": 183,
+        "level": "L0",
+        "levelFps": 92,
         "target": 72
       }
     },
@@ -288,7 +288,7 @@
           true,
           true
         ],
-        "steer": -0.0005539361511392506,
+        "steer": -0.0006585844333780626,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -297,13 +297,13 @@
           true,
           true
         ],
-        "fps": 399.920015995609,
-        "calls": 226,
+        "fps": 399.9999999999997,
+        "calls": 282,
         "shadowCalls": 0,
-        "level": "L1",
-        "levelFps": 183,
+        "level": "L0",
+        "levelFps": 159,
         "target": 72,
-        "speed": 0.012936000000493659
+        "speed": 0.012935999999754132
       }
     },
     {
@@ -311,7 +311,7 @@
       "pass": true,
       "detail": {
         "presenting": false,
-        "fps": 140.74734859748312
+        "fps": 143.84177404860014
       }
     }
   ],
@@ -326,8 +326,8 @@
     0
   ],
   "perf": {
-    "fps": 399.9208077611342,
-    "calls": 228,
+    "fps": 399.92001599709835,
+    "calls": 284,
     "note": "desktop GPU running the emulator; not Quest numbers"
   },
   "errors": []
