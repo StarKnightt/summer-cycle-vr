@@ -21,8 +21,13 @@ import { TimeOfDay, type Preset } from "./world/timeofday";
 import { Fireflies } from "./world/fireflies";
 import { Profiler } from "./render/profiler";
 import { specializeUber } from "./render/materials";
+import { XRMode, XR_TIER, QUEST, installXrOutput } from "./xr";
 
 const params = new URLSearchParams(location.search);
+// Dev only: Meta's IWER emulates a Quest 3 (with hands) in a desktop browser.
+if (import.meta.env.DEV && params.has("xremu")) await (await import("./xr/emulator")).installEmulator(params.get("xremu"));
+// Before any shader compiles: scene shaders gain the headset output path (off on the desktop).
+installXrOutput();
 const AUTOPLAY = params.has("autoplay") && params.get("autoplay") !== "0";
 const KUWA = params.get("kuwahara") !== "0";
 /** Go straight into the ride once built (no "click to ride" wait) — for automated captures. */
@@ -36,7 +41,8 @@ if (!document.createElement("canvas").getContext("webgl2")) {
 }
 let renderer: THREE.WebGLRenderer;
 try {
-  renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", stencil: false });
+  // The scene has its own MSAA target on the desktop; on Quest the context flag gives the XR layer 4x MSAA.
+  renderer = new THREE.WebGLRenderer({ antialias: QUEST, powerPreference: "high-performance", stencil: false });
 } catch (e) {
   fatal("The graphics couldn't start", "Your browser refused to create a WebGL 2 context. Closing other 3D tabs or restarting the browser usually helps.");
   throw e;
@@ -101,7 +107,7 @@ scene.add(birds.group);
 const fireflies = new Fireflies();
 scene.add(fireflies.mesh);
 
-const shadow = new SunShadow(2048, 55);
+const shadow = QUEST ? new SunShadow(XR_TIER.shadowSize, XR_TIER.shadowHalf) : new SunShadow(2048, 55);
 const reflection = new PaddyReflection(Math.floor(innerWidth * 0.5), Math.floor(innerHeight * 0.5));
 
 const startParam = params.get("start");
@@ -275,7 +281,45 @@ const pause = new Pause(canvasEl, {
   lookHint: () => showLookHint(),
 });
 
+// Headset: the seated ride with hands on the bars (Enter VR on the loader or bottom right).
+const xr = new XRMode({
+  renderer,
+  scene,
+  rider,
+  ctl,
+  input,
+  tod,
+  world,
+  audio,
+  place: (u, z, speed) => {
+    ctl.x = roadX(z) + u;
+    ctl.z = z;
+    ctl.yaw = roadYaw(z);
+    ctl.speed = speed;
+    ctl.steer = ctl.lean = 0;
+  },
+  onStart: () => {
+    if (pause.paused) pause.resume(false);
+    if (document.pointerLockElement === canvasEl) document.exitPointerLock();
+    lookHint.style.opacity = "0";
+    renderer.setAnimationLoop(frame);
+  },
+  onEnd: () => {
+    renderer.setAnimationLoop(null);
+    last = performance.now();
+    requestAnimationFrame(frame);
+  },
+});
+xr.session.button.addEventListener("click", () => {
+  // Before the ride starts the loader takes this click (and enters VR from its callback).
+  if (started && !waiting) {
+    audio.start();
+    void xr.session.enter();
+  }
+});
+
 addEventListener("resize", () => {
+  if (xr.presenting) return;
   renderer.setSize(innerWidth, innerHeight);
   chase.cam.aspect = innerWidth / innerHeight;
   chase.cam.updateProjectionMatrix();
@@ -313,17 +357,25 @@ const fadeEl = document.getElementById("fade")!;
 let warm = 0;
 /** Intro mode: the finished frame waits (clock frozen, loop idle) behind the loader for a gesture. */
 let waiting = false;
+/** Window rAF while on the desktop; the session's frame loop (renderer.setAnimationLoop) in VR. */
+const schedule = () => {
+  if (!xr.presenting) requestAnimationFrame(frame);
+};
 function frame(now: number) {
-  if (pause.paused) {
+  const inXR = xr.presenting;
+  // A window rAF still queued from before the session (or the session's after it ended): drop it.
+  if (inXR !== renderer.xr.isPresenting) return;
+  if (pause.paused && !inXR) {
     // Frozen: no simulation and no drawing (the last frame stays on screen); no dt jump on resume.
     last = now;
-    requestAnimationFrame(frame);
+    schedule();
     return;
   }
   const interval = now - last;
   let dt = interval / 1000;
   last = now;
   if (dt > 0.1) dt = 0.1;
+  if (inXR) dt = xr.preSim(dt, t);
   if (warm < WARM_FRAMES) {
     warm++;
     dt = 0;
@@ -335,8 +387,8 @@ function frame(now: number) {
   }
   t += dt;
   G.uTime.value = t;
-  explore.enabled = started && !waiting;
-  pause.enabled = started && !waiting;
+  explore.enabled = started && !waiting && !inXR;
+  pause.enabled = started && !waiting && !inXR;
 
   if (explore.bikeActive) {
     // Sub-step so a frame hitch can never tunnel the bike through a thin obstacle.
@@ -370,7 +422,8 @@ function frame(now: number) {
     {
       speed: ctl.speed,
       steer: onFoot ? ctl.steer * 1.6 * (1 - explore.kick) + explore.parkSteer : ctl.steer * 1.6,
-      lean: onFoot ? ctl.lean * (1 - explore.kick) + explore.parkLean : ctl.lean,
+      // Headset: the bike stays upright under her (a leaning frame below a level horizon feels wrong).
+      lean: inXR ? 0 : onFoot ? ctl.lean * (1 - explore.kick) + explore.parkLean : ctl.lean,
       crank: ctl.crank,
       wheel: ctl.wheel,
       pedaling: onFoot ? 0 : ctl.pedaling,
@@ -383,14 +436,16 @@ function frame(now: number) {
   rider.bike.bump(ctl.bumpImpulse);
   prof.cpuEnd();
   prof.cpuBegin("camera+tod");
-  if (onFoot && chase.mode !== "custom") explore.updateCamera(dt, chase.cam);
+  if (inXR) xr.postSim(dt, t);
+  else if (onFoot && chase.mode !== "custom") explore.updateCamera(dt, chase.cam);
   else chase.update(dt, ctl, t, rider);
-  sky.follow(chase.cam.position);
+  const viewCam = inXR ? xr.session.cam : chase.cam;
+  sky.follow(inXR ? xr.head : chase.cam.position);
   tod.update(dt);
   prof.cpuEnd();
   prof.cpuBegin("birds");
   birds.activity = tod.birds;
-  birds.update(dt, t, chase.cam, _actor.set(px, 0, pz));
+  birds.update(dt, t, viewCam, _actor.set(px, 0, pz));
   prof.cpuEnd();
   prof.cpuBegin("fireflies");
   fireflies.update(pz, tod.night);
@@ -422,6 +477,11 @@ function frame(now: number) {
     shadowCenter.set(px + (shadowCenter.x / l) * 22, 0, pz + (shadowCenter.z / l) * 22);
   } else shadowCenter.set(ctl.x - Math.sin(ctl.yaw) * 30, 0, ctl.z - Math.cos(ctl.yaw) * 30);
   renderer.info.reset();
+  if (inXR) {
+    xr.render(shadow, shadowCenter, interval);
+    frames++;
+    return;
+  }
   const cpuR = performance.now();
   prof.begin("shadow", renderer);
   shadow.update(renderer, scene, shadowCenter);
@@ -458,10 +518,11 @@ function frame(now: number) {
       // The gesture that dismisses the loader also starts the audio (autoplay policy).
       fadeEl.style.display = "none";
       waiting = true;
-      loader.ready((viaPointer) => {
+      loader.ready((viaPointer, vr) => {
         audio.start();
-        if (viaPointer && FULLSCREEN) void pause.enterFullscreen();
-        if (!AUTOPLAY) {
+        if (vr) void xr.session.enter();
+        else if (viaPointer && FULLSCREEN) void pause.enterFullscreen();
+        if (!AUTOPLAY && !vr) {
           if (viaPointer) lockPointer();
           else showLookHint();
         }
@@ -473,7 +534,7 @@ function frame(now: number) {
       return;
     }
   }
-  requestAnimationFrame(frame);
+  schedule();
 }
 let started = false;
 requestAnimationFrame(frame);
@@ -492,6 +553,19 @@ window.__ride = {
   world,
   get aaLog() {
     return AA.log;
+  },
+  /** Headset test hooks (state, skip ahead on the guided ride, menu actions). */
+  xr: {
+    get state() {
+      return xr.state;
+    },
+    skip(dist: number) {
+      xr.skip(dist);
+    },
+    enter() {
+      return xr.session.enter();
+    },
+    mode: xr,
   },
   get sprint() {
     return { held: input.sprint, k: ctl.sprint, speed: ctl.speed };

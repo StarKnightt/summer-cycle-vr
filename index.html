@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23f2c028'/%3E%3C/svg%3E" />
     <title>Summer Cycle — a summer afternoon on two wheels</title>
-    <meta name="description" content="A Ghibli- and Shinkai-style bicycle ride through the Japanese countryside at four times of day, with every mesh, texture and sound generated in code. Plays in your browser." />
+    <meta name="description" content="A cel-painted bicycle ride through the Japanese countryside at four times of day, with every mesh, texture and sound generated in code. Plays in your browser and in VR with your hands on the bars." />
     <meta name="theme-color" content="#f3ead6" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Summer Cycle" />
     <meta property="og:title" content="Summer Cycle" />
-    <meta property="og:description" content="A Ghibli- and Shinkai-style bicycle ride through the Japanese countryside at four times of day, with every mesh, texture and sound generated in code." />
+    <meta property="og:description" content="A cel-painted bicycle ride through the Japanese countryside at four times of day, with every mesh, texture and sound generated in code, in the browser or in VR." />
     <meta property="og:url" content="https://starknightt.github.io/summer-cycle/" />
     <meta property="og:image" content="https://starknightt.github.io/summer-cycle/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -19,7 +19,7 @@
     <meta property="og:image:alt" content="A girl cycling past flooded rice paddies at sunset, under the title Summer Cycle" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Summer Cycle" />
-    <meta name="twitter:description" content="A Ghibli- and Shinkai-style bicycle ride through the Japanese countryside at four times of day, with every mesh, texture and sound generated in code." />
+    <meta name="twitter:description" content="A cel-painted bicycle ride through the Japanese countryside at four times of day, with every mesh, texture and sound generated in code, in the browser or in VR." />
     <meta name="twitter:image" content="https://starknightt.github.io/summer-cycle/og.jpg" />
     <meta name="twitter:image:alt" content="A girl cycling past flooded rice paddies at sunset, under the title Summer Cycle" />
     <style>
@@ -34,6 +34,23 @@
       #fade {
         position: fixed; inset: 0; background: #f6efdc; pointer-events: none; z-index: 5;
       }
+
+      /* ------------------------------------------------------------ enter VR */
+      #xr-enter {
+        position: fixed; right: 26px; bottom: 54px; z-index: 30;
+        display: grid; grid-template-columns: auto auto; column-gap: 12px; align-items: center;
+        padding: 12px 20px 12px 14px; border: 1px solid rgba(58, 42, 34, 0.28); border-radius: 14px;
+        background: rgba(246, 239, 220, 0.92); color: #3a2a22; cursor: pointer;
+        font: 400 17px/1.1 "Georgia", "Times New Roman", serif; letter-spacing: 0.06em;
+        box-shadow: 0 6px 22px rgba(40, 28, 18, 0.22); transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      #xr-enter[hidden] { display: none; }
+      #xr-enter:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(40, 28, 18, 0.28); }
+      #xr-enter .xr-k {
+        grid-row: span 2; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+        background: #d98a4e; color: #fff8ec; font-size: 14px; letter-spacing: 0.12em;
+      }
+      #xr-enter .xr-s { font-size: 12px; letter-spacing: 0.14em; opacity: 0.65; }
 
       /* ------------------------------------------------------------ pause */
       #pause {

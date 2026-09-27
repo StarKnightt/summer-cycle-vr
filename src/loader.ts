@@ -35,7 +35,7 @@ export class Loader {
   private stage: Stage | null = null;
   private lastSwap = 0;
   private pendingText: string | null = null;
-  private go: ((viaPointer: boolean) => void) | null = null;
+  private go: ((viaPointer: boolean, vr: boolean) => void) | null = null;
   private readonly reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   constructor(skip: boolean) {
@@ -60,10 +60,10 @@ export class Loader {
     } else this.flush();
   }
 
-  /** Built: show the prompt; `go` runs inside the first click/key (so it may start audio). */
-  ready(go: (viaPointer: boolean) => void): void {
+  /** Built: show the prompt; `go` runs inside the first click/key (so it may start audio). `vr`: the Enter VR button. */
+  ready(go: (viaPointer: boolean, vr: boolean) => void): void {
     this.progress = 1;
-    if (!this.el) return go(false);
+    if (!this.el) return go(false, false);
     this.el.style.setProperty("--p", "1");
     this.go = go;
     this.el.classList.add("go");
@@ -175,11 +175,11 @@ export class Loader {
     this.lastSwap = performance.now();
   }
 
-  private trigger(viaPointer: boolean): void {
+  private trigger(viaPointer: boolean, vr = false): void {
     const go = this.go;
     if (!go) return;
     this.go = null;
-    go(viaPointer);
+    go(viaPointer, vr);
   }
 
   private readonly swallow = (e: Event) => e.stopImmediatePropagation();
@@ -193,7 +193,10 @@ export class Loader {
 
   private readonly onPointer = (e: PointerEvent) => {
     e.stopImmediatePropagation();
-    if (e.button === 0) this.trigger(true);
+    const vr = !!(e.target as Element | null)?.closest?.("[data-xr-enter]");
+    // The VR button only counts once the world is built (a session can't start mid-build).
+    if (vr && !this.go) return;
+    if (e.button === 0) this.trigger(true, vr);
   };
 
   private readonly onResize = () => {
