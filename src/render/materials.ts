@@ -128,8 +128,14 @@ float brush(vec3 wp, vec3 n){
 
 // Toon-thresholded shadow map: 1 = sunlit, 0 = in shadow. Canopy shadows get sun flecks.
 bool gFastShadow = false;
+float shadowVis0(vec3 wpos, vec3 N);
+// uShadowOn 0…1: the headset fades the sun shadow out and in when its quality level changes.
 float shadowVis(vec3 wpos, vec3 N){
-  if (uShadowOn < 0.5) return 1.0;
+  if (uShadowOn < 0.001) return 1.0;
+  float v = shadowVis0(wpos, N);
+  return uShadowOn >= 1.0 ? v : mix(1.0, v, uShadowOn);
+}
+float shadowVis0(vec3 wpos, vec3 N){
   vec2 rel = abs(wpos.xz - uShadowCenter.xz);
   float edge = smoothstep(uShadowHalf * 0.82, uShadowHalf * 0.98, max(rel.x, rel.y));
   if (edge >= 1.0) return 1.0;

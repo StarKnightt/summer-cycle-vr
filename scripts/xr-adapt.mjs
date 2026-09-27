@@ -71,6 +71,32 @@ try {
     });
     await wait(150);
   }
+  // 0. Deterministic: a fresh controller fed synthetic frame times (independent of this machine's
+  // GPU). Level costs 18 / 15 / 13 / 11 ms against a 72 Hz target (step-down below ~65 fps):
+  // it must leave L0, settle at L1 and stay there; with the cost gone (13.8 ms everywhere) it
+  // must climb back to L0 once, 10 s or more later.
+  const sim = await R(() => {
+    const A = window.__ride.xr.mode.adaptive.constructor, lad = window.__ride.xr.mode.adaptive.ladder;
+    const a = new A(lad, () => {});
+    a.reset(0, 72);
+    const out = [];
+    let t = 0;
+    const run = (secs, ms) => {
+      for (const end = t + secs; t < end; ) {
+        const dt = ms(a.level);
+        a.tick(dt);
+        t += dt / 1000;
+      }
+      out.push(`${t.toFixed(1)}s ${a.current.name}`);
+    };
+    run(20, (l) => [18, 15, 13, 11][l]);
+    const afterLoad = a.current.name;
+    run(25, () => 13.8);
+    return { afterLoad, end: a.current.name, log: a.log.slice(), out };
+  });
+  check("simulated: heavy L0 settles at L1", sim.afterLoad === "L1", sim);
+  check("simulated: cost gone, climbs back to L0", sim.end === "L0" && sim.log.filter((l) => /headroom/.test(l)).length === 1, sim.log);
+
   const st = () => R(() => ({ ...window.__ride.xr.state, log: window.__ride.xr.mode.adaptive.log.slice(), programs: window.__rideRenderer.info.programs.length }));
   const timeline = [];
   const sample = async (secs) => {

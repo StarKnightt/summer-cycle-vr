@@ -61,6 +61,8 @@ export class XRMode {
   readonly adaptive: Adaptive;
   /** Sun shadow cadence for the current quality level (0 = off). */
   private shadowEvery: number = XR_TIER.shadow ? XR_TIER.shadowEvery : 0;
+  /** Sun shadow strength, easing toward on / off over about a second (stale map meanwhile). */
+  private shadowK = 1;
   /** World-space XR bits (grip rings, hands). */
   private worldGroup = new THREE.Group();
   private pauseCard: Panel;
@@ -125,7 +127,6 @@ export class XRMode {
       this.proxies.setDetail(l.radii, l.thin);
       d.world.setDetail(XR_TIER.cullK, l.far, XR_TIER.treeFar);
       this.shadowEvery = l.shadowEvery;
-      if (!l.shadowEvery) G.uShadowOn.value = 0;
       renderer.xr.setFoveation(l.foveation);
       this.fps.level = l.name;
       this.fps.panel.redraw();
@@ -146,9 +147,11 @@ export class XRMode {
     d.rider.setXrView(true, XR_TIER.riderShadow);
     d.world.setDetail(XR_TIER.cullK, XR_TIER.far, XR_TIER.treeFar);
     this.proxies.setActive(true);
-    const hz = renderer_frameRate(d.renderer) ?? XR_TIER.frameRate;
+    // Judge against 72 Hz at most: a Quest running at 90 or 120 still clears the 60 fps bar.
+    const hz = Math.min(72, renderer_frameRate(d.renderer) ?? XR_TIER.frameRate);
     this.adaptive.reset(0, hz);
     this.proxies.snap();
+    this.shadowK = this.shadowEvery ? 1 : 0;
     REFL.uReflOn.value = 0;
     if (!this.started) this.restart();
     this.started = true;
@@ -267,6 +270,7 @@ export class XRMode {
     // the canvas and compile an sRGB-output variant of every scene shader.
     if (!(xrTarget as { isXRRenderTarget?: boolean } | null)?.isXRRenderTarget) return;
     const calls0 = renderer.info.render.calls;
+    this.shadowK = Math.max(0, Math.min(1, this.shadowK + (this.shadowEvery ? 1 : -1) * (interval / 1000)));
     if (this.shadowEvery && this.frame++ % this.shadowEvery === 0) {
       // Casters are static scenery: a map a frame old (with the matrix it was drawn with) is still
       // right. The proxies already limit casters to the instances around her.
@@ -274,7 +278,9 @@ export class XRMode {
       shadow.update(renderer, scene, center);
       renderer.xr.enabled = true;
       renderer.setRenderTarget(xrTarget);
-    } else if (!this.shadowEvery) G.uShadowOn.value = 0;
+    }
+    // The shadow pass sets full strength; the fade (and a stale map while fading out) wins.
+    G.uShadowOn.value = this.shadowK;
     this.shadowCalls = renderer.info.render.calls - calls0;
     // No MSAA on the layer (emulator): coverage alpha falls back to the ordered dither.
     G.uDither.value = renderer.getContextAttributes()?.antialias ? 0 : 1;

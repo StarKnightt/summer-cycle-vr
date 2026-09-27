@@ -28,17 +28,18 @@ export function levels(base: { radii: ProxyRadii; shadowEvery: number; shadow: b
 }
 
 /** Seconds of frames averaged for a step-down decision, and the fps margin under the target. */
-const WINDOW = 1.5;
+const WINDOW = 2.5;
 const MARGIN = 0.9;
-/** Frames are ignored this long after entering, resuming or changing level (s). */
+/** Frames are ignored this long after entering or resuming (s), and after a level change. */
 const SETTLE = 2;
+const SETTLE_STEP = 3;
 /** Step up only after this long at a level with steady headroom (s); doubled after a bounce. */
 const UP_AFTER = 10;
 const UP_WINDOW = 4;
 
 /**
  * Automatic quality for the headset. Frame intervals come from the XR frame loop; a sustained
- * window under the display rate (minus a margin) steps one level lighter. Stepping back up needs
+ * (2.5 s) window under the display rate (minus a margin) steps one level lighter. Stepping back up needs
  * several seconds of clear headroom and at least UP_AFTER seconds at the level, and a level that
  * had to be left again soon after stepping up is not retried for twice as long.
  */
@@ -95,7 +96,8 @@ export class Adaptive {
   private set(i: number, why: string): void {
     this.level = i;
     this.at = 0;
-    this.settle();
+    // Let the new level's own frame time fill the window before judging it.
+    this.settle(SETTLE_STEP);
     this.log.push(`${this.t.toFixed(1)}s ${this.ladder[i].name} (${why})`);
     if (this.log.length > 40) this.log.shift();
     this.apply(this.ladder[i], i);
