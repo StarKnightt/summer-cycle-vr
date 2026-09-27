@@ -23,6 +23,8 @@ import { Profiler } from "./render/profiler";
 import { specializeUber } from "./render/materials";
 import { XRMode, XR_TIER, QUEST, installXrOutput } from "./xr";
 import { arcPoint } from "./xr/sundial";
+import { mergeSiblings } from "./xr/merge";
+import { ID } from "./world/geo";
 
 const params = new URLSearchParams(location.search);
 // Dev only: Meta's IWER emulates a Quest 3 (with hands) in a desktop browser.
@@ -120,6 +122,8 @@ if (camParam === "fpp") {
   chase.fpp = 1;
 } else if (camParam) chase.mode = camParam as CamMode;
 if (!params.has("nospec")) for (const o of [rider.root, rider.walker, birds.group, fireflies.mesh]) specializeUber(o);
+// Quest tier: the bike, basket load and bouquet are ~130 small meshes; merge static siblings.
+if (QUEST) mergeSiblings(rider.bike.group, (m) => (m.material as THREE.ShaderMaterial).uniforms?.uId?.value === ID.skin);
 const post = new Post(renderer, innerWidth, innerHeight, { kuwahara: KUWA, msaa: Number(params.get("msaa") ?? 4) });
 const prof = new Profiler(renderer, params.has("prof"));
 post.prof = prof;

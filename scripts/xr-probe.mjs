@@ -32,6 +32,51 @@ try {
     ["tier default (cull 0.35, far 240)", 0.35, 240, 70],
     ["lite (cull 0.28, far 180)", 0.28, 180, 45],
   ];
+  // Exact per-draw accounting for one headset frame: every draw call counted in onBeforeRender,
+  // split into eye draws and sun-shadow draws, grouped by surface family (outline id).
+  const exact = await page.evaluate(async () => {
+    const r = window.__ride, acc = { eye: {}, shadow: {} }, tot = { eye: [0, 0], shadow: [0, 0] };
+    let on = false;
+    const names = ["sky", "ground", "water", "berm", "grass", "rice", "tree", "house", "pole", "wire", "fence", "sign", "bike", "rider", "hair", "hills", "flower", "butterfly", "skin", "eye"];
+    r.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const prev = o.onBeforeRender;
+      o.onBeforeRender = function (rd, sc, cam, geo, mat, grp) {
+        prev.call(this, rd, sc, cam, geo, mat, grp);
+        if (!on) return;
+        const k = cam.isOrthographicCamera ? "shadow" : "eye";
+        const id = mat.uniforms?.uId?.value;
+        const key = (id !== undefined ? names[id] ?? id : mat.type) + (this.isInstancedMesh ? "*" : "");
+        const n = ((geo.index ? geo.index.count : geo.attributes.position.count) / 3) * (this.isInstancedMesh ? this.count : 1);
+        const a = (acc[k][key] ??= [0, 0]);
+        a[0]++, (a[1] += n), tot[k][0]++, (tot[k][1] += n);
+      };
+    });
+    // Two consecutive headset frames (the Quest tier draws the shadow every other frame), averaged.
+    const m = r.xr.mode, orig = m.render.bind(m);
+    let left = 2;
+    await new Promise((res) => {
+      m.render = (...a) => {
+        on = left > 0;
+        orig(...a);
+        on = false;
+        if (--left === 0) res();
+      };
+    });
+    m.render = orig;
+    const frames = 2;
+    for (const k of ["eye", "shadow"]) tot[k] = tot[k].map((v) => Math.round(v / frames));
+    const fmt = (o) => Object.entries(o).sort((a, b) => b[1][1] - a[1][1]).map(([k, [c, t]]) => `${k}:${c / frames}/${Math.round(t / frames / 1000)}k`).join(" ");
+    return { eye: fmt(acc.eye), shadow: fmt(acc.shadow), tot, frames };
+  });
+  console.log("per frame (both eyes; divide eye by 2 for per eye), calls/tris by family");
+  console.log("  eye   ", exact.eye);
+  console.log("  shadow", exact.shadow);
+  console.log("  totals", JSON.stringify(exact.tot));
+  console.log(
+    "load",
+    JSON.stringify(await page.evaluate(() => ({ bootMs: window.__ride.bootLog.find((b) => b[0] === "total")?.[1], programs: window.__rideRenderer.info.programs.length }))),
+  );
   // Triangle budget by outline id (surface family) for visible meshes within 120 m, drawn per eye.
   const byId = await page.evaluate(() => {
     const r = window.__ride, out = {};

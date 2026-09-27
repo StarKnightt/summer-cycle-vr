@@ -1866,14 +1866,15 @@ export class Rider {
 
   /**
    * Headset view: the player is the rider, so everything of her leaves the main view (the bike,
-   * its basket and her shadow stay).
+   * its basket and, with `shadow`, her shadow stay).
    */
-  setXrView(on: boolean): void {
+  setXrView(on: boolean, shadow = true): void {
     if (on === this.xrView) return;
     this.xrView = on;
     const set = (o: THREE.Object3D) =>
       o.traverse((c) => {
-        c.layers.enable(LAYER_SHADOW);
+        if (on && !shadow) c.layers.disable(LAYER_SHADOW);
+        else c.layers.enable(LAYER_SHADOW);
         if (on) c.layers.disable(0);
         else c.layers.enable(0);
       });

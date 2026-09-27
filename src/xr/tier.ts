@@ -26,8 +26,12 @@ export const XR_TIER = {
   shadowEvery: num("xrshadow", QUEST ? 2 : 1),
   /** Fine detail (grass, rice, flowers) drops out this much sooner; whole chunks past `far`. */
   cullK: LITE ? 0.28 : 0.35,
-  far: num("xrfar", LITE ? 180 : 240),
+  far: num("xrfar", LITE ? 160 : 200),
   /** Hero leaf-card trees out to this distance; -1 = the lobed distant trees everywhere (Quest). */
   treeFar: params.get("xrtrees") === "hero" ? 70 : QUEST ? -1 : 70,
   showFps: params.get("xrfps") === "1",
+  /** Headset instancing radii (m), see proxies.ts. */
+  radii: LITE ? { hero: 10, trees: 60, fine: 12, other: 30 } : { hero: 16, trees: 72, fine: 17, other: 45 },
+  /** Her shadow on the road (~60 small draws in the shadow pass). */
+  riderShadow: !QUEST,
 };

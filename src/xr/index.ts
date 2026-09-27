@@ -16,6 +16,7 @@ import { FpsMeter, Vignette } from "./comfort";
 import { Guide } from "./guide";
 import { INK, Panel, text, washiCard } from "./ui";
 import { XR_TIER } from "./tier";
+import { Proxies } from "./proxies";
 
 export { installXrOutput } from "./grade";
 export { XR_TIER, QUEST } from "./tier";
@@ -55,6 +56,7 @@ export class XRMode {
   readonly vignette = new Vignette();
   readonly fps = new FpsMeter();
   readonly guide = new Guide();
+  readonly proxies: Proxies;
   /** World-space XR bits (grip rings, hands). */
   private worldGroup = new THREE.Group();
   private pauseCard: Panel;
@@ -112,7 +114,8 @@ export class XRMode {
     this.pauseCard.opacity = 0;
     this.session.rig.add(this.pauseCard.mesh);
     this.session.rig.visible = this.worldGroup.visible = false;
-    scene.add(this.session.rig, this.worldGroup);
+    this.proxies = new Proxies(d.world, XR_TIER.radii);
+    scene.add(this.session.rig, this.worldGroup, this.proxies.group);
   }
 
   get presenting(): boolean {
@@ -122,8 +125,9 @@ export class XRMode {
   private start(): void {
     const d = this.d;
     this.session.rig.visible = this.worldGroup.visible = true;
-    d.rider.setXrView(true);
+    d.rider.setXrView(true, XR_TIER.riderShadow);
     d.world.setDetail(XR_TIER.cullK, XR_TIER.far, XR_TIER.treeFar);
+    this.proxies.setActive(true);
     REFL.uReflOn.value = 0;
     if (!this.started) this.restart();
     this.started = true;
@@ -135,6 +139,7 @@ export class XRMode {
     const d = this.d;
     this.session.rig.visible = this.worldGroup.visible = false;
     d.rider.setXrView(false);
+    this.proxies.setActive(false);
     d.world.setDetail(1, Infinity, 130);
     REFL.uReflOn.value = 1;
     d.input.xr = null;
@@ -201,6 +206,7 @@ export class XRMode {
   postSim(dt: number, t: number): void {
     const { ctl, tod, audio } = this.d;
     this.session.place(ctl.x, ctl.z, ctl.yaw);
+    this.proxies.update(ctl.x, ctl.z);
     this.session.rig.updateMatrixWorld(true);
     const accel = dt > 0 ? Math.abs(ctl.speed - this.lastSpeed) / dt : 0;
     this.lastSpeed = ctl.speed;
@@ -227,12 +233,9 @@ export class XRMode {
     const calls0 = renderer.info.render.calls;
     if (XR_TIER.shadow && this.frame++ % XR_TIER.shadowEvery === 0) {
       // Casters are static scenery: a map a frame old (with the matrix it was drawn with) is still
-      // right, and the lobed distant trees throw the same toon-thresholded shadow for far fewer
-      // triangles than the leaf-card heroes.
+      // right. The proxies already limit casters to the instances around her.
       renderer.xr.enabled = false;
-      this.d.world.reflectLod(true);
       shadow.update(renderer, scene, center);
-      this.d.world.reflectLod(false);
       renderer.xr.enabled = true;
       renderer.setRenderTarget(xrTarget);
     } else if (!XR_TIER.shadow) G.uShadowOn.value = 0;

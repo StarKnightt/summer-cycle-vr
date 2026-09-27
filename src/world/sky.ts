@@ -5,6 +5,7 @@ import { mote } from "./vegetation";
 import { cloudMaterial, skyMaterial, uber } from "../render/materials";
 import { LAYER_REFLECT, onLayers } from "../render/lightpasses";
 import { mulberry32, range } from "../core/rng";
+import { QUEST } from "../xr/tier";
 
 /**
  * Everything at "infinite" distance follows the camera: sky dome, cumulus towers, distant ridges,
@@ -107,7 +108,8 @@ function cumulus(size: number, tall: number, seed: number): THREE.BufferGeometry
     const y = t * top * range(r, 0.72, 1.0);
     const rad = size * range(r, 0.22, 0.36) * (1 - t * 0.35);
     const x = Math.cos(a) * spread, z = Math.sin(a) * spread * 0.55;
-    const g = blob(rad, 2, 0.12, seed + i * 3.7);
+    // Quest tier: one subdivision less on the big lobes (they are 1-2 km away).
+    const g = blob(rad, QUEST ? 1 : 2, 0.12, seed + i * 3.7);
     const cy = y + rad * 0.5;
     g.translate(x, cy, z);
     lobe(g, x, cy, z);
@@ -120,7 +122,7 @@ function cumulus(size: number, tall: number, seed: number): THREE.BufferGeometry
     const u = range(r, 0.15, 1), a = r() * Math.PI * 2;
     const s = Math.sqrt(1 - u * u);
     const rad = b.rad * range(r, 0.22, 0.38);
-    const g = blob(rad, 1, 0.15, seed + 100 + i);
+    const g = blob(rad, QUEST ? 0 : 1, 0.15, seed + 100 + i);
     const lx = b.x + Math.cos(a) * s * b.rad * 0.92, ly = b.y + u * b.rad * 0.92, lz = b.z + Math.sin(a) * s * b.rad * 0.92;
     g.translate(lx, ly, lz);
     lobe(g, lx, ly, lz);
@@ -136,7 +138,7 @@ function cumulus(size: number, tall: number, seed: number): THREE.BufferGeometry
     const out = Math.atan2(b.z, b.x) + range(r, -0.9, 0.9);
     const u = range(r, -0.25, 0.4), s = Math.sqrt(1 - u * u);
     const rad = b.rad * range(r, 0.2, 0.34);
-    const g = blob(rad, 1, 0.15, seed + 300 + i);
+    const g = blob(rad, QUEST ? 0 : 1, 0.15, seed + 300 + i);
     const lx = b.x + Math.cos(out) * s * b.rad * 0.9, ly = b.y + u * b.rad * 0.9, lz = b.z + Math.sin(out) * s * b.rad * 0.9;
     g.translate(lx, ly, lz);
     lobe(g, lx, ly, lz);
@@ -166,8 +168,8 @@ function cumulus(size: number, tall: number, seed: number): THREE.BufferGeometry
 }
 
 function ridge(rad: number, h: number, seed: number, color: string, mat: number, forest: boolean, peaks: boolean): THREE.BufferGeometry {
-  const seg = forest ? 360 : 200;
-  const rows = forest ? 10 : 5;
+  const seg = Math.round((forest ? 360 : 200) * (QUEST ? 0.5 : 1));
+  const rows = forest ? (QUEST ? 6 : 10) : QUEST ? 4 : 5;
   const pos: number[] = [];
   const idx: number[] = [];
   const s = seed;
@@ -229,7 +231,8 @@ function ridge(rad: number, h: number, seed: number, color: string, mat: number,
 
   // Layered tree-mass bumps along the ridgeline and a second row lower down the slope.
   const parts: THREE.BufferGeometry[] = [g];
-  const step = 5.5 * (rad / 430);
+  // Quest tier: fewer, coarser bumps (a sliver of the headset's pixels at 430 m and beyond).
+  const step = 5.5 * (rad / 430) * (QUEST ? 1.6 : 1);
   const circ = Math.PI * 2 * rad;
   const n = Math.floor(circ / step);
   for (let k = 0; k < n; k++) {
@@ -240,7 +243,7 @@ function ridge(rad: number, h: number, seed: number, color: string, mat: number,
       const bR = (row === 0 ? range(rr, 5, 10) : range(rr, 4, 7)) * (rad / 430);
       const y = (row === 0 ? top - bR * 0.25 : top * range(rr, 0.45, 0.8));
       const d = rad - bR * 0.2 + (row === 0 ? 0 : -rad * 0.004);
-      const b = blob(bR, 1, 0.2, k * 7 + row);
+      const b = blob(bR * (QUEST ? 1.15 : 1), QUEST ? 0 : 1, 0.2, k * 7 + row);
       b.scale(1, range(rr, 0.7, 1.0), 1);
       b.translate(Math.sin(a) * d, y, -Math.cos(a) * d);
       const shade = row === 0 ? range(rr, 0.8, 1.05) : range(rr, 0.7, 0.95);

@@ -100,8 +100,8 @@ export class Hands {
       this.pads.push(p);
     }
     const skin = new THREE.Color("#f1c6a8");
-    const bead = new THREE.SphereGeometry(1, 12, 8);
-    const rod = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true);
+    const bead = new THREE.SphereGeometry(1, 9, 6);
+    const rod = new THREE.CylinderGeometry(1, 1, 1, 7, 1, true);
     const n = this.perHand * 2, nb = BONES.length * 2;
     this.beads = new THREE.InstancedMesh(bead, handMaterial(skin, false), n);
     this.beadInk = new THREE.InstancedMesh(bead, handMaterial(skin, true), n);

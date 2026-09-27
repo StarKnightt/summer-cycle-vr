@@ -974,7 +974,9 @@ export function buildChunk(k: number): Chunk {
   for (const [key, list] of Object.entries(farTrees)) {
     const kind = key.slice(0, -1) as TreeKind;
     const vi = Number(key.slice(-1));
-    add(instMesh(P.far[kind][vi], treeMat, list), R);
+    const im = instMesh(P.far[kind][vi], treeMat, list);
+    if (im) im.userData.distant = true;
+    add(im, R);
   }
   void box;
   return { k, group, colliders };
@@ -1000,6 +1002,12 @@ export class World {
   /** Headset tier: fine detail drops out `cullK` times sooner, whole chunks past `far` metres. */
   private cullK = 1;
   private far = Infinity;
+  /** Headset: instanced scenery is drawn by world-space proxies (xr/proxies.ts); chunks hide theirs. */
+  private proxied = false;
+  setProxied(on: boolean): void {
+    this.proxied = on;
+    for (const c of this.chunks) c.lodD = undefined;
+  }
   setDetail(cullK: number, far: number, treeFar: number): void {
     this.cullK = cullK;
     this.far = far;
@@ -1021,8 +1029,12 @@ export class World {
       c.group.visible = d < this.far;
       for (const o of c.group.children) {
         const u = o.userData;
-        if (u.cull !== undefined) o.visible = d < u.cull * this.cullK;
-        else if (u.far) (o as THREE.Mesh).geometry = d > TREE_FAR ? u.far : u.near;
+        if (this.proxied && (o as THREE.InstancedMesh).isInstancedMesh) o.visible = false;
+        else if (u.cull !== undefined) o.visible = d < u.cull * this.cullK;
+        else {
+          o.visible = true;
+          if (u.far) (o as THREE.Mesh).geometry = d > TREE_FAR ? u.far : u.near;
+        }
       }
     }
   }
