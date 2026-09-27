@@ -29,6 +29,11 @@ Measured with `scripts/xr-probe.mjs` in the emulator at the shop row, Quest tier
   0.75 framebuffer scale.
 - Sound feedback: a soft rattle when a hand takes the bars, a glass furin chime when you take the
   sun or poke the wrist menu.
+- Seated calibration waits for frames with a real viewer pose (the first frames of a session may
+  have none), and the wrist menu knows a hand is on the bars while paused.
+- `scripts/xr-reel.mjs`: demo footage without a headset. The guided ride in the emulator with
+  scripted, eased hands, captured frame by frame at 30 fps into H.264 clips, plus the game's own
+  soundtrack recorded in real time; shot list, cut and voiceover in `media/xr-reel/SHOTLIST.md`.
 - Multiview (OVR_multiview2) is not available: three.js only implements it in its WebGPU renderer,
   and this game's GLSL shader materials need the WebGL renderer.
 
