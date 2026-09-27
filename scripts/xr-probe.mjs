@@ -15,7 +15,7 @@ const browser = await chromium.launch({
 });
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await page.goto(`${URL}?xremu=hands&xrtier=quest&fs=0&stereo=1`);
+  await page.goto(`${URL}?xremu=hands&xrtier=quest&fs=0&stereo=1${argv.includes("--lite") ? "&xrlite=1" : ""}`);
   await page.waitForFunction(() => window.__ride?.waiting === true, null, { timeout: 180000 });
   await page.click("#xr-enter");
   await page.waitForFunction(() => window.__ride.xr.state.presenting, null, { timeout: 20000 });
@@ -75,7 +75,7 @@ try {
   console.log("  totals", JSON.stringify(exact.tot));
   console.log(
     "load",
-    JSON.stringify(await page.evaluate(() => ({ bootMs: window.__ride.bootLog.find((b) => b[0] === "total")?.[1], programs: window.__rideRenderer.info.programs.length }))),
+    JSON.stringify(await page.evaluate(() => ({ bootMs: window.__ride.bootLog.find((b) => b[0] === "total")?.[1], programs: window.__rideRenderer.info.programs.length, slowest: [...window.__ride.bootLog].filter((b) => b[0] !== "total").sort((a, b) => b[1] - a[1]).slice(0, 10), drawSum: window.__ride.bootLog.filter((b) => /^draw/.test(b[0])).reduce((s, b) => s + b[1], 0) }))),
   );
   // Triangle budget by outline id (surface family) for visible meshes within 120 m, drawn per eye.
   const byId = await page.evaluate(() => {

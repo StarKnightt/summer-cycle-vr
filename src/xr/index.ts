@@ -230,6 +230,9 @@ export class XRMode {
   render(shadow: SunShadow, center: THREE.Vector3, interval: number): void {
     const { renderer, scene } = this.d;
     const xrTarget = renderer.getRenderTarget();
+    // No viewer pose yet (first frames): three hasn't bound the XR target. Drawing now would go to
+    // the canvas and compile an sRGB-output variant of every scene shader.
+    if (!(xrTarget as { isXRRenderTarget?: boolean } | null)?.isXRRenderTarget) return;
     const calls0 = renderer.info.render.calls;
     if (XR_TIER.shadow && this.frame++ % XR_TIER.shadowEvery === 0) {
       // Casters are static scenery: a map a frame old (with the matrix it was drawn with) is still

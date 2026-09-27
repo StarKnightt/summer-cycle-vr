@@ -15,7 +15,7 @@ export const QUEST = /OculusBrowser|Quest|Pacific/i.test(navigator.userAgent) ||
 const LITE = params.get("xrlite") === "1";
 
 export const XR_TIER = {
-  framebufferScale: num("xrscale", QUEST ? 0.85 : 1),
+  framebufferScale: num("xrscale", LITE ? 0.75 : QUEST ? 0.85 : 1),
   foveation: num("xrfov", 1),
   frameRate: num("xrhz", 72),
   /** Sun shadow in the headset (desktop keeps its 2048 map). */
