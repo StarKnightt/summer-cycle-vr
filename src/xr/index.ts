@@ -59,6 +59,7 @@ export class XRMode {
   readonly guide = new Guide();
   readonly proxies: Proxies;
   readonly adaptive: Adaptive;
+  private adaptiveOn = true;
   /** Sun shadow cadence for the current quality level (0 = off). */
   private shadowEvery: number = XR_TIER.shadow ? XR_TIER.shadowEvery : 0;
   /** Sun shadow strength, easing toward on / off over about a second (stale map meanwhile). */
@@ -132,6 +133,8 @@ export class XRMode {
       this.fps.panel.redraw();
       this.menu.refresh();
     });
+    // ?xradapt=0 pins L0 (scripted captures run on a 30 fps virtual clock).
+    this.adaptiveOn = new URLSearchParams(location.search).get("xradapt") !== "0";
     const slow = Number(new URLSearchParams(location.search).get("xrslow"));
     if (Number.isFinite(slow) && slow > 0) this.adaptive.slow = slow;
     scene.add(this.session.rig, this.worldGroup, this.proxies.group);
@@ -291,7 +294,7 @@ export class XRMode {
       const until = performance.now() + (this.adaptive.slow * renderer.info.render.triangles) / 650e3;
       while (performance.now() < until);
     }
-    if (!this.paused) this.adaptive.tick(interval);
+    if (!this.paused && this.adaptiveOn) this.adaptive.tick(interval);
     this.fps.tick(interval / 1000, renderer.info.render.calls - calls0);
   }
 

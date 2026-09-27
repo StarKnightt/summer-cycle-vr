@@ -35,6 +35,16 @@ const ONLY = arg("only", "all");
 const OUT = path.join(ROOT, "media", "xr-reel");
 const FRAMES = arg("frames", path.join(os.tmpdir(), "summer-cycle-xr-reel"));
 const FPS = 30, DT = 1 / FPS, W = 1920, H = 1080;
+/** Gallery mode: no clip frames, single stills at chosen moments into shots/xr/gallery/. */
+const GALLERY = ONLY === "gallery" || ONLY === "hero";
+const GALLERY_DIR = path.join(ROOT, "shots", "xr", "gallery");
+if (GALLERY) await fs.mkdir(GALLERY_DIR, { recursive: true });
+let stillPage = null;
+async function still(name) {
+  if (!GALLERY || !stillPage) return;
+  await stillPage.screenshot({ path: path.join(GALLERY_DIR, `${name}.jpg`), type: "jpeg", quality: 93 });
+  console.log(`still ${name}`);
+}
 /** Capture only clips whose names sort within [--from, --to] (the rest still run, uncaptured). */
 const FROM = arg("from", ""), TO = arg("to", "~");
 await fs.mkdir(OUT, { recursive: true });
@@ -291,6 +301,7 @@ async function frames(page, R, secs, each) {
   }
 }
 async function clip(name, fn) {
+  if (GALLERY) return fn();
   if (name < FROM || name.slice(0, TO.length) > TO) return fn();
   clipDir = path.join(FRAMES, name);
   clipFrames = 0;
@@ -306,7 +317,8 @@ const state = (page) => page.evaluate(() => ({ ...window.__ride.xr.state, speed:
 // ------------------------------------------------------------------ the guided ride
 
 async function ride() {
-  const page = await open("xremu=hands&xrtier=quest&fs=0");
+  const page = await open("xremu=hands&xrtier=quest&xradapt=0&fs=0");
+  stillPage = page;
   const R = rig();
   await page.evaluate((p) => {
     // Hands rest in the lap before the session (raw reference-space positions, out of view).
@@ -344,6 +356,7 @@ async function ride() {
     await frames(page, R, 1.8);
     R.pitch.go(-14, 2.4, R.T);
     await frames(page, R, 4.2);
+    await still("02-hands-on-bars");
   });
 
   await clip("04-brake-pinch", async () => {
@@ -434,14 +447,17 @@ async function ride() {
     // Drag it slowly down the arc; the head follows the sun toward the hills, a beat behind.
     const DRAG = 12;
     const t0 = R.T;
-    await frames(page, R, DRAG, (T) => {
+    const dragEach = (T) => {
       const u = (T - t0) / DRAG;
       const k = ease(u) * 0.85 + u * 0.15;
       const f = k * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(f));
       const p = lerp3(pts[i], pts[i + 1], f - i);
       R.right.pos = new Track(p);
       follow(R, p, 0.05, lerp(-14, -9, u), -6);
-    });
+    };
+    await frames(page, R, DRAG * 0.42, dragEach);
+    await still("08-drag-sun-golden");
+    await frames(page, R, DRAG * 0.58, dragEach);
     await frames(page, R, 0.6);
     R.right.pinch.go(0, 0.5, R.T);
     await frames(page, R, 0.8);
@@ -454,6 +470,7 @@ async function ride() {
     R.pitch.go(-5, 4, R.T);
     R.yaw.go(-8, 4, R.T);
     await frames(page, R, 3.6);
+    await still("09-sunset-after-drag");
     R.yaw.go(4, 6, R.T);
     await frames(page, R, 5.0);
   });
@@ -523,6 +540,8 @@ async function ride() {
   await clip("07-wrist-menu-pause-resume", async () => {
     await frames(page, R, 0.6);
     await openMenu();
+    await frames(page, R, 0.3);
+    await still("10-wrist-menu");
     await poke(0);
     R.right.quat.go(Q.gripR, 0.6, R.T);
     await frames(page, R, 0.6);
@@ -544,7 +563,9 @@ async function ride() {
       R.right.pos.go(r, dur, R.T);
       await frames(page, R, hold);
     };
-    await turn(-12, 1.2, 2.2);
+    await turn(-12, 1.2, 1.3);
+    await still("04-turning-vignette");
+    await frames(page, R, 0.9);
     await turn(0, 1.2, 1.6);
     await openMenu();
     await poke(1);
@@ -580,6 +601,7 @@ async function ride() {
     for (const s of ["left", "right"]) R[s].pos.go(LAP[s], 1.8, R.T, 0.02);
     look(R, torii, 3.5, -2, 6);
     await frames(page, R, 5.0);
+    await still("12-arrival-dusk");
     // Stone lanterns and the jizo by the steps, then up at the first stars and fireflies.
     look(R, [torii[0] - 0.8, 0.9, torii[2] + 3], 3.5);
     await frames(page, R, 4.2);
@@ -615,7 +637,7 @@ async function desktop() {
 }
 
 async function stereo() {
-  const page = await open("xremu=hands&xrtier=quest&fs=0&stereo=1");
+  const page = await open("xremu=hands&xrtier=quest&xradapt=0&fs=0&stereo=1");
   const R = rig();
   await page.evaluate(() => {
     for (const s of ["left", "right"]) window.__xrdev.hands[s].position.set(s === "left" ? -0.2 : 0.2, 0.5, 0.1);
@@ -635,7 +657,48 @@ async function stereo() {
   R.left.pos.go(GRIP.left, 1.2, R.T, 0.04);
   R.right.pos.go(GRIP.right, 1.2, R.T, 0.04);
   await frames(page, R, 6);
+  stillPage = page;
   await clip("11-stereo-both-eyes", async () => frames(page, R, 3.2));
+  await still("15-stereo-both-eyes");
+  await page.close();
+}
+
+// ------------------------------------------------------------------ gallery hero (thumbnail)
+
+async function hero() {
+  const page = await open("xremu=hands&xrtier=quest&xradapt=0&fs=0");
+  stillPage = page;
+  const R = rig();
+  await page.evaluate(() => {
+    for (const s of ["left", "right"]) window.__xrdev.hands[s].position.set(s === "left" ? -0.2 : 0.2, 0.5, 0.1);
+    window.__startManual();
+  });
+  await frames(page, R, 1.0);
+  await page.click("#xr-enter");
+  for (let i = 0; i < 90 && !(await page.evaluate(() => window.__ride.xr.state.presenting)); i++) await frames(page, R, DT);
+  await frames(page, R, 0.2);
+  await page.evaluate(() => window.__ride.xr.mode.session.recenter());
+  await frames(page, R, 0.3);
+  for (const s of ["left", "right"]) {
+    Q[s === "left" ? "gripL" : "gripR"] = await page.evaluate((s) => window.__reelPalmTo(s, [s === "left" ? 0.15 : -0.15, -1, -0.35]), s);
+    R[s].quat.go(Q[s === "left" ? "gripL" : "gripR"], 0.01, R.T);
+  }
+  R.left.pos.go(GRIP.left, 1.2, R.T, 0.04);
+  R.right.pos.go(GRIP.right, 1.2, R.T, 0.04);
+  // Golden hour at the opening composition, UI cards and the sun dial out of the picture.
+  await page.evaluate(() => {
+    const r = window.__ride, m = r.xr.mode;
+    r.setTime("golden", true);
+    r.place(-0.9, -40, 4.2);
+    m.guide.group.visible = false;
+    m.sun.group.visible = false;
+  });
+  // Out over the paddies toward the low sun, the bars just under the frame.
+  R.sway = 0;
+  R.pitch.go(-1, 2, R.T);
+  R.yaw.go(24, 2, R.T);
+  await frames(page, R, 5.0);
+  await still("hero-golden-hour");
   await page.close();
 }
 
@@ -723,12 +786,17 @@ async function encodeAll() {
   }
 }
 
-if (!["all", "ride", "desktop", "stereo", "audio", "encode"].includes(ONLY)) throw new Error(`--only=${ONLY}?`);
+if (!["all", "ride", "desktop", "stereo", "audio", "encode", "gallery", "hero"].includes(ONLY)) throw new Error(`--only=${ONLY}?`);
 try {
+  if (ONLY === "gallery") {
+    await ride();
+    await stereo();
+  }
+  if (GALLERY) await hero();
   if (ONLY === "all" || ONLY === "ride") await ride();
   if (ONLY === "all" || ONLY === "desktop") await desktop();
   if (ONLY === "all" || ONLY === "stereo") await stereo();
-  if (ONLY !== "audio") await encodeAll();
+  if (ONLY !== "audio" && !GALLERY) await encodeAll();
   if (ONLY === "all" || ONLY === "audio") await audio();
 } catch (e) {
   errors.push(`script: ${e.stack || e}`);
