@@ -23,6 +23,8 @@ export class WristMenu {
   private flash = 0;
   private armed = true;
   shown = false;
+  /** Called on every poke (sound feedback). */
+  onPoke: () => void = () => {};
 
   constructor(private items: MenuItem[]) {
     const H = PAD * 2 + ROW * items.length + 0.02;
@@ -84,6 +86,7 @@ export class WristMenu {
         this.armed = false;
         this.flash = 0.25;
         this.items[row].act();
+        this.onPoke();
       }
       if (p.z > 0.02 || !inside) this.armed = true;
     }

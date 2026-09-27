@@ -103,6 +103,8 @@ export class XRMode {
       { label: () => `Frame rate: ${this.fps.panel.mesh.visible ? "shown" : "hidden"}`, act: () => (this.fps.panel.mesh.visible = !this.fps.panel.mesh.visible) },
       { label: () => "Leave VR", act: () => this.session.exit() },
     ]);
+    // Sound feedback: a glass furin for menu pokes and taking the sun, a soft rattle on the bars.
+    this.menu.onPoke = () => d.audio.trigger("furin");
     this.worldGroup.add(this.menu.group);
     this.pauseCard = new Panel(0.36, 0.12, 1024, (g, w, h) => {
       washiCard(g, w, h);
@@ -176,11 +178,15 @@ export class XRMode {
     if (this.paused) {
       // Hands-only resume: a pinch anywhere (after the headset gave focus back).
       if (s.visible && (this.hands.left.pinchStart || this.hands.right.pinchStart) && !this.menu.shown) this.setPaused(false);
-      this.d.input.xr = { ...this.rideIn, ride: false, brake: 1 };
+      this.rideIn.ride = false;
+      this.rideIn.brake = 1;
+      this.d.input.xr = this.rideIn;
       return 0;
     }
     this.bars.invite = this.guide.step === "hold" ? 1 : 0;
+    const w0 = this.bars.held[0], w1 = this.bars.held[1];
     this.bars.update(dt, this.hands, this.head, t);
+    if ((this.bars.held[0] && !w0) || (this.bars.held[1] && !w1)) this.d.audio.bump(0.14);
     if (this.bars.rang) {
       this.d.rider.bike.ringBell();
       this.d.audio.ringBell();
@@ -216,7 +222,9 @@ export class XRMode {
     if (this.paused) return;
     if (this.guide.step !== "hold") this.dist += Math.max(0, ctl.speed) * dt;
     this.sun.beckon = this.guide.step === "sun" && !this.sun.grabbed ? 1 : 0;
+    const had = this.sun.grabbed;
     this.sun.update(dt, this.hands, this.head, t);
+    if (this.sun.grabbed && !had) this.d.audio.trigger("furin");
     this.guide.update(dt, { held: this.bars.heldFor, rang: this.bars.rang, sunPos: tod.pos, sunMoved: this.sun.moved, dist: this.dist, speed: ctl.speed });
     if (this.guide.arrived && this.arriveT < 0) {
       this.arriveT = 0;

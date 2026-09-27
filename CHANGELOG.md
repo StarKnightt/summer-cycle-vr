@@ -5,6 +5,33 @@ Summer Cycle existed before the Meta VR Start Developer Competition 2026 as a de
 during the competition window, from 27 September 2026, on the `webxr-hands` branch. It is the
 "significant update" for the Adapted / Significantly Updated Experience division.
 
+## 2026-09-27: Summer Cycle VR, phase 2 (Quest performance)
+
+Measured with `scripts/xr-probe.mjs` in the emulator at the shop row, Quest tier, per eye:
+
+| | Before | After (default) | After (`xrlite=1`) |
+|---|---|---|---|
+| Scene draw calls | 307 | 114 | 52 |
+| Sun shadow draw calls | 316 every other frame | 56 every other frame | none |
+| Triangles | 1.34M | 325k | 143k |
+
+- **Instancing proxies** (`src/xr/proxies.ts`): in the headset, every distinct plant, grass, tree
+  and rock instancing is one world-space InstancedMesh filled with only the instances around the
+  rider (z-sorted, range-searched, refilled every 0.75 m). That gives per-instance tree LOD
+  (leaf-card heroes within 16 m, lobed trees to 72 m), and grass and flowers within 17 m that
+  shrink into the ground at the edge instead of popping. Trees fade the same way at their edge.
+- The bike, basket load and bouquet (about 130 small meshes) merge into a handful on the Quest
+  tier; her shadow is dropped there (about 60 small shadow draws).
+- Lighter cumulus lobes and distant ridges on the Quest tier (they are 400 m to 2 km away).
+- No scene shader recompiles on entering VR in any tier: headset frames before the XR target is
+  bound are skipped (the lite tier was compiling 29 sRGB variants on its first frame).
+- `xrlite=1` is now a much lighter fallback: no sun shadow, smaller radii, 160 m view distance,
+  0.75 framebuffer scale.
+- Sound feedback: a soft rattle when a hand takes the bars, a glass furin chime when you take the
+  sun or poke the wrist menu.
+- Multiview (OVR_multiview2) is not available: three.js only implements it in its WebGPU renderer,
+  and this game's GLSL shader materials need the WebGL renderer.
+
 ## 2026-09-27: Summer Cycle VR, phase 1
 
 ### A seated ride in the headset
