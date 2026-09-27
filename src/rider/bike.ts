@@ -328,6 +328,11 @@ export class Bike {
     this.bellT = 0;
   }
 
+  /** World position of the bell dome (the headset's hands ring it by touch). */
+  bellWorld(out: THREE.Vector3): THREE.Vector3 {
+    return this.bell.getWorldPosition(out);
+  }
+
   /** Jolt (0…1) from a kerb / collision: rattles basket, fenders and cables. */
   bump(k: number): void {
     this.bumpIn = Math.max(this.bumpIn, k);

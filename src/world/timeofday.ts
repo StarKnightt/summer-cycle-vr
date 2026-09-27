@@ -169,6 +169,7 @@ export class TimeOfDay {
     this.blend = cloneLook(this.looks[0]);
     this.lapse = params.has("timelapse") && params.get("timelapse") !== "0";
     if (this.lapse) this.idx = 0;
+    this.pos = this.idx;
     this.apply(this.lapse ? this.looks[0] : this.cur);
     addEventListener("keydown", (e) => {
       if (e.code === "KeyT" && !e.repeat) this.cycle();
@@ -199,8 +200,28 @@ export class TimeOfDay {
     // `cur` may be the scratch blend: freeze a copy as the start of the new transition.
     this.from = cloneLook(this.cur);
     this.to = this.looks[this.idx];
+    this.fromPos = this.pos;
     this.k = instant ? 1 : 0;
-    if (instant) this.cur = this.to;
+    if (instant) {
+      this.cur = this.to;
+      this.pos = this.idx;
+    }
+    this.dirty = true;
+  }
+
+  /** Continuous 0…3 position (afternoon … dusk) of the light on screen. */
+  pos = 0;
+  private fromPos = 0;
+
+  /** Hold the light at any point along afternoon → dusk (dragging the sun in the headset). */
+  scrub(s: number): void {
+    s = Math.min(3, Math.max(0, s));
+    this.lapse = false;
+    this.k = 1;
+    this.pos = s;
+    this.idx = Math.round(s);
+    this.cur = this.along(s);
+    this.to = this.looks[this.idx];
     this.dirty = true;
   }
 
@@ -219,6 +240,7 @@ export class TimeOfDay {
       const s = x < 0.7 ? (x / 0.7) * 2.1 : 2.1 + ((x - 0.7) / 0.3) * 0.9;
       this.cur = this.along(Math.min(3, s));
       this.idx = Math.min(3, Math.round(s));
+      this.pos = Math.min(3, s);
       if (x >= 1) {
         // Settled on dusk: nothing more to blend (the scratch look stops changing).
         this.lapseDone = true;
@@ -229,6 +251,7 @@ export class TimeOfDay {
       this.k = Math.min(1, this.k + dt / TRANSITION);
       const e = this.k * this.k * (3 - 2 * this.k);
       this.cur = this.k >= 1 ? this.to : mix(this.from, this.to, e, this.blend);
+      this.pos = this.fromPos + (this.idx - this.fromPos) * e;
       this.dirty = true;
     }
     if (this.dirty) {

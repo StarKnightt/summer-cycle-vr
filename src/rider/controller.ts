@@ -49,6 +49,7 @@ export class Controller {
     let throttle = 0;
     let brake = 0;
     let steerIn = 0;
+    const xr = this.autoplay ? null : input.xr;
     if (this.hold) {
       this.speed = Math.max(0, this.speed - 9 * dt);
       brake = 0;
@@ -57,16 +58,11 @@ export class Controller {
       const target = CRUISE + 0.6 * Math.sin(this.time * 0.17) + 0.3 * Math.sin(this.time * 0.41);
       this.coastT = (this.time % 17) > 13.5 ? 1 : 0;
       throttle = this.coastT ? 0 : clamp((target - this.speed) * 1.5, -1, 1);
-      // Pure pursuit on a line slightly left of centre (Japan rides on the left).
-      const la = 7 + this.speed * 0.6;
-      const zt = this.z - la * Math.cos(this.yaw);
-      const off = -0.85 + 0.25 * Math.sin(this.time * 0.11);
-      const xt = roadX(zt) + off;
-      const want = Math.atan2(this.x - xt, this.z - zt);
-      let err = want - this.yaw;
-      err = Math.atan2(Math.sin(err), Math.cos(err));
-      const delta = Math.atan((2 * BIKE.WHEELBASE * Math.sin(err)) / la);
-      steerIn = clamp(delta / 0.3, -1, 1);
+      steerIn = this.pursuit(-0.85 + 0.25 * Math.sin(this.time * 0.11));
+    } else if (xr) {
+      brake = xr.brake > 0.05 ? xr.brake : 0;
+      throttle = xr.ride && !brake ? 1 : 0;
+      steerIn = clamp(xr.steer + xr.assist * this.pursuit(-0.85), -1, 1);
     } else {
       throttle = input.up ? 1 : 0;
       brake = input.down ? 1 : 0;
@@ -83,6 +79,11 @@ export class Controller {
     const tgt = CRUISE;
     if (this.hold) {
       // (decelerated above)
+    } else if (xr) {
+      // Headset: never backward, gentle ramps (vection is the enemy), analog brake.
+      if (brake) this.speed = Math.max(0, this.speed - 3.6 * brake * dt);
+      else if (throttle > 0) this.speed += clamp(xr.cruise - this.speed, -0.4, xr.accel) * Math.min(1, dt * 1.2) * (this.speed < xr.cruise ? 1 : 0.5);
+      else this.speed = Math.max(0, this.speed - 0.7 * dt);
     } else if (brake) {
       if (this.speed > 0.05) this.speed = Math.max(0, this.speed - 4.2 * dt);
       else this.speed = damp(this.speed, -BACK, 4, dt);
@@ -103,7 +104,7 @@ export class Controller {
     const maxSteer = 0.3 / (1 + this.speed * 0.06);
     this.steer = damp(this.steer, steerIn * maxSteer, this.autoplay ? 4 : 6, dt);
     // At a standstill she can still walk the bars round (so a stop at an obstacle isn't a dead end).
-    const turnSpeed = steerIn !== 0 && Math.abs(this.speed) < 1.2 ? (this.speed < 0 ? -1.2 : 1.2) : this.speed;
+    const turnSpeed = !xr && steerIn !== 0 && Math.abs(this.speed) < 1.2 ? (this.speed < 0 ? -1.2 : 1.2) : this.speed;
     this.yawRate = (turnSpeed * Math.tan(this.steer)) / BIKE.WHEELBASE;
     this.yaw += this.yawRate * dt;
 
@@ -161,6 +162,18 @@ export class Controller {
     const dist = this.speed * dt;
     this.wheel += dist / BIKE.WHEEL_R;
     this.crank += ((dist / BIKE.WHEEL_R) / this.gear) * this.pedaling;
+  }
+
+  /** Pure-pursuit steering (-1…1) toward a line `off` metres from the road centre. */
+  private pursuit(off: number): number {
+    const la = 7 + this.speed * 0.6;
+    const zt = this.z - la * Math.cos(this.yaw);
+    const xt = roadX(zt) + off;
+    const want = Math.atan2(this.x - xt, this.z - zt);
+    let err = want - this.yaw;
+    err = Math.atan2(Math.sin(err), Math.cos(err));
+    const delta = Math.atan((2 * BIKE.WHEELBASE * Math.sin(err)) / la);
+    return clamp(delta / 0.3, -1, 1);
   }
 
   /** Effective gear: sprinting spins the cranks ~15% faster per wheel turn (higher cadence). */

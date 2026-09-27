@@ -1,9 +1,12 @@
 import * as THREE from "three";
 import { G, REFL, shadowDepthMaterial } from "./materials";
 
-/** Render layers: 0 = main view, 1 = casts sun shadow, 2 = appears in paddy reflections. */
-export const LAYER_SHADOW = 1;
-export const LAYER_REFLECT = 2;
+/**
+ * Render layers: 0 = main view, 3 = casts sun shadow, 4 = appears in paddy reflections.
+ * 1 and 2 stay free: three's WebXR cameras use them for the left and right eye.
+ */
+export const LAYER_SHADOW = 3;
+export const LAYER_REFLECT = 4;
 
 export function onLayers(o: THREE.Object3D, ...layers: number[]): void {
   o.traverse((c) => {

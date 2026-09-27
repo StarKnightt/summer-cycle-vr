@@ -1,3 +1,17 @@
+export interface XrRideInput {
+  /** At least one hand on the bars: she pedals toward `cruise`. Hands off: a gentle coast to a stop. */
+  ride: boolean;
+  /** -1 (right) … 1 (left), the bars' turn. */
+  steer: number;
+  /** 0…1 brake. */
+  brake: number;
+  /** Target riding speed (m/s) and how fast she gets there (m/s²). */
+  cruise: number;
+  accel: number;
+  /** 0…1 lane keeping blended into the steering (comfort). */
+  assist: number;
+}
+
 export class Input {
   up = false;
   down = false;
@@ -5,6 +19,8 @@ export class Input {
   right = false;
   /** Shift held (sprint on the bike; the on-foot explorer reads Shift itself for running). */
   sprint = false;
+  /** Headset ride input (hands on the bars or pads); replaces the keys while set. */
+  xr: XrRideInput | null = null;
 
   constructor(onFirst: () => void, onToggleView: () => void = () => {}) {
     const set = (code: string, v: boolean) => {

@@ -997,6 +997,15 @@ export class World {
     this.root.add(c.group);
   }
 
+  /** Headset tier: fine detail drops out `cullK` times sooner, whole chunks past `far` metres. */
+  private cullK = 1;
+  private far = Infinity;
+  setDetail(cullK: number, far: number, treeFar: number): void {
+    this.cullK = cullK;
+    this.far = far;
+    this.setTreeFar(treeFar);
+  }
+
   /** Recycle chunks so the window [pz - L + behind, pz + behind] is always covered. */
   update(pz: number, behind = 110): void {
     const top = pz + behind;
@@ -1009,9 +1018,10 @@ export class World {
       const d = pz < z1 ? z1 - pz : pz > z0 ? pz - z0 : 0;
       if (d === c.lodD) continue;
       c.lodD = d;
+      c.group.visible = d < this.far;
       for (const o of c.group.children) {
         const u = o.userData;
-        if (u.cull !== undefined) o.visible = d < u.cull;
+        if (u.cull !== undefined) o.visible = d < u.cull * this.cullK;
         else if (u.far) (o as THREE.Mesh).geometry = d > TREE_FAR ? u.far : u.near;
       }
     }

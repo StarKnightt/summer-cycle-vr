@@ -1864,9 +1864,34 @@ export class Rider {
     g.computeVertexNormals();
   }
 
+  /**
+   * Headset view: the player is the rider, so everything of her leaves the main view (the bike,
+   * its basket and her shadow stay).
+   */
+  setXrView(on: boolean): void {
+    if (on === this.xrView) return;
+    this.xrView = on;
+    const set = (o: THREE.Object3D) =>
+      o.traverse((c) => {
+        c.layers.enable(LAYER_SHADOW);
+        if (on) c.layers.disable(0);
+        else c.layers.enable(0);
+      });
+    for (const c of this.lean.children) if (c !== this.bike.group) set(c);
+    for (const h of this.gripHands) set(h);
+    if (!on) {
+      // Hand back to the first-person state the chase camera asks for next.
+      const [fp, arms] = [this.fppOn, this.fppArms];
+      this.fppOn = !fp;
+      this.setFirstPerson(fp, arms);
+    }
+  }
+  private xrView = false;
+
   /** Hide head/hair (first-person view) or show them. */
   setFirstPerson(on: boolean, arms = on): void {
     arms &&= on;
+    if (this.xrView) return;
     if (on === this.fppOn && arms === this.fppArms) return;
     this.fppOn = on;
     this.fppArms = arms;
@@ -1894,6 +1919,7 @@ export class Rider {
 
   /** Hide the skirt from the main view only (keeps its shadow) while the camera swoops in. */
   setSkirtHidden(on: boolean): void {
+    if (this.xrView) return;
     for (const m of [this.skirt, this.seatCover, this.skirtCap, this.pelvis]) {
       if (on) m.layers.disable(0);
       else m.layers.enable(0);
@@ -1980,7 +2006,7 @@ export class Rider {
     this.applyPose(P);
     this.ponyOffBack();
     this.seatCover.visible = fb === 0 && !this.fppArms;
-    for (const l of this.lenses) l.layers.mask = this.fppOn ? 0 : 1;
+    for (const l of this.lenses) l.layers.mask = this.fppOn || this.xrView ? 0 : 1;
     this.drapeSkirt(f && fb > 0 ? f.speed : s.speed, s.time, stand, gait);
     // Shorts: hips just under the waistband, legs over the top of each thigh.
     this.pelvis.position.copy(P.torsoP).add(_v1.set(0, -0.07, 0.005));
