@@ -176,6 +176,9 @@ export class XRMode {
     this.worldGroup.updateMatrixWorld(true);
     this.hands.update();
     if (this.paused) {
+      // Keep knowing which hand holds a grip (the wrist menu only opens off the bars).
+      this.bars.update(0, this.hands, this.head, t);
+      this.bars.rang = false;
       // Hands-only resume: a pinch anywhere (after the headset gave focus back).
       if (s.visible && (this.hands.left.pinchStart || this.hands.right.pinchStart) && !this.menu.shown) this.setPaused(false);
       this.rideIn.ride = false;

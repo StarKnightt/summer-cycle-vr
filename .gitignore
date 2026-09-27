@@ -10,3 +10,6 @@ shots/critic-*/
 # research scratch
 refs/web/
 scripts/_refgrab.mjs
+
+# demo footage masters (scripts/xr-reel.mjs), too large for git
+media/xr-reel/*.mp4

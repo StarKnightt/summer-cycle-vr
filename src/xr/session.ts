@@ -92,7 +92,7 @@ export class XRRide {
     this.presenting = true;
     this.visible = true;
     XR_OUT.uXR.value = 1;
-    this.calibrate = 2;
+    this.calibrate = 3;
     this.hooks.onStart();
   }
 
@@ -102,7 +102,7 @@ export class XRRide {
 
   /** Map the current head pose onto her eye point again (next frame). */
   recenter(): void {
-    this.calibrate = 1;
+    this.calibrate = 2;
   }
 
   /** Once per XR frame, before rendering: place the rig on the bike, recalibrate if asked. */
@@ -110,8 +110,10 @@ export class XRRide {
     this.rig.position.set(x, 0.02, z);
     this.rig.rotation.set(0, yaw, 0);
     // The camera's local pose (inside `offset`) is the head pose in the reference space; it is
-    // written by the render call, so calibration uses last frame's pose.
-    if (this.calibrate > 0 && --this.calibrate === 0) {
+    // written by the render call, so calibration uses last frame's pose, and only counts frames
+    // that had a viewer pose (the first frames of a session may not).
+    const posed = this.renderer.xr.getCamera().cameras.length > 0;
+    if (this.calibrate > 0 && posed && --this.calibrate === 0) {
       const h = this.cam.position;
       const f = new THREE.Vector3(0, 0, -1).applyQuaternion(this.cam.quaternion);
       const headYaw = Math.atan2(-f.x, -f.z);
