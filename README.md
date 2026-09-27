@@ -1,7 +1,8 @@
 # Summer Cycle
 
-A bicycle ride down a Japanese country road on a late-summer afternoon, drawn in the manner of a
-Ghibli or Makoto Shinkai background painting and built in Three.js. There is no score and nothing
+A bicycle ride down a Japanese country road on a late-summer afternoon, drawn like a hand-painted
+animation background and built in Three.js. It also runs in VR on Meta Quest, seated, with your
+hands on the handlebars (see [CHANGELOG.md](CHANGELOG.md)). There is no score and nothing
 to win; you ride past flooded paddies, a row of old wooden shops and power lines sagging over the
 road, and the sun goes down if you let it. Everything on screen and everything you hear is
 generated in code at load time: the meshes, the leaf atlas the trees are painted with, the
@@ -270,7 +271,7 @@ prints GPU milliseconds per pass alongside the frame rate, which is how contenti
 
 It was built in Cursor by AI agents working in a builder and critic loop, from the brief in
 [PROMPT.md](PROMPT.md): a builder implemented each pass, a critic compared rendered frames against
-Ghibli and Shinkai reference stills and against the user's own screenshots, and the findings went
+animation background reference stills and against the user's own screenshots, and the findings went
 into the next pass. The user steered it throughout, and the scope grew well past the brief on
 those requests; the list at the end of `PROMPT.md` records how.
 
