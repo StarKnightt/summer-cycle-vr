@@ -56,6 +56,8 @@ export class FpsMeter {
   private acc = 0;
   fps = 0;
   calls = 0;
+  /** Adaptive quality level shown next to the rate. */
+  level = "L0";
 
   constructor() {
     this.panel = new Panel(0.13, 0.034, 384, (g, w, h) => {
@@ -63,7 +65,7 @@ export class FpsMeter {
       g.beginPath();
       g.roundRect(0, 0, w, h, 14);
       g.fill();
-      text(g, `${Math.round(this.fps)} fps  ${this.calls} calls`, w / 2, h / 2, 40, w * 0.9, this.fps >= 70 ? "#cfe8b0" : this.fps >= 58 ? "#f1d58a" : "#f09a80");
+      text(g, `${Math.round(this.fps)} fps  ${this.calls} calls  ${this.level}`, w / 2, h / 2, 40, w * 0.9, this.fps >= 70 ? "#cfe8b0" : this.fps >= 58 ? "#f1d58a" : "#f09a80");
     });
     this.panel.mesh.position.set(0.12, -0.14, -0.6);
     this.panel.mesh.renderOrder = 1001;

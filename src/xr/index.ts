@@ -17,6 +17,7 @@ import { Guide } from "./guide";
 import { INK, Panel, text, washiCard } from "./ui";
 import { XR_TIER } from "./tier";
 import { Proxies } from "./proxies";
+import { Adaptive, levels } from "./adaptive";
 
 export { installXrOutput } from "./grade";
 export { XR_TIER, QUEST } from "./tier";
@@ -57,6 +58,9 @@ export class XRMode {
   readonly fps = new FpsMeter();
   readonly guide = new Guide();
   readonly proxies: Proxies;
+  readonly adaptive: Adaptive;
+  /** Sun shadow cadence for the current quality level (0 = off). */
+  private shadowEvery: number = XR_TIER.shadow ? XR_TIER.shadowEvery : 0;
   /** World-space XR bits (grip rings, hands). */
   private worldGroup = new THREE.Group();
   private pauseCard: Panel;
@@ -100,7 +104,7 @@ export class XRMode {
       { label: () => `Pace: ${PACES[this.pace].name}`, act: () => (this.pace = (this.pace + 1) % PACES.length) },
       { label: () => "Recenter view", act: () => this.session.recenter() },
       { label: () => "Restart the ride", act: () => this.restart() },
-      { label: () => `Frame rate: ${this.fps.panel.mesh.visible ? "shown" : "hidden"}`, act: () => (this.fps.panel.mesh.visible = !this.fps.panel.mesh.visible) },
+      { label: () => `Frame rate: ${this.fps.panel.mesh.visible ? "shown" : "hidden"} (${this.adaptive?.current.name ?? "L0"})`, act: () => (this.fps.panel.mesh.visible = !this.fps.panel.mesh.visible) },
       { label: () => "Leave VR", act: () => this.session.exit() },
     ]);
     // Sound feedback: a glass furin for menu pokes and taking the sun, a soft rattle on the bars.
@@ -117,6 +121,18 @@ export class XRMode {
     this.session.rig.add(this.pauseCard.mesh);
     this.session.rig.visible = this.worldGroup.visible = false;
     this.proxies = new Proxies(d.world, XR_TIER.radii);
+    this.adaptive = new Adaptive(levels(XR_TIER), (l) => {
+      this.proxies.setDetail(l.radii, l.thin);
+      d.world.setDetail(XR_TIER.cullK, l.far, XR_TIER.treeFar);
+      this.shadowEvery = l.shadowEvery;
+      if (!l.shadowEvery) G.uShadowOn.value = 0;
+      renderer.xr.setFoveation(l.foveation);
+      this.fps.level = l.name;
+      this.fps.panel.redraw();
+      this.menu.refresh();
+    });
+    const slow = Number(new URLSearchParams(location.search).get("xrslow"));
+    if (Number.isFinite(slow) && slow > 0) this.adaptive.slow = slow;
     scene.add(this.session.rig, this.worldGroup, this.proxies.group);
   }
 
@@ -130,6 +146,9 @@ export class XRMode {
     d.rider.setXrView(true, XR_TIER.riderShadow);
     d.world.setDetail(XR_TIER.cullK, XR_TIER.far, XR_TIER.treeFar);
     this.proxies.setActive(true);
+    const hz = renderer_frameRate(d.renderer) ?? XR_TIER.frameRate;
+    this.adaptive.reset(0, hz);
+    this.proxies.snap();
     REFL.uReflOn.value = 0;
     if (!this.started) this.restart();
     this.started = true;
@@ -163,7 +182,10 @@ export class XRMode {
   setPaused(p: boolean): void {
     if (p === this.paused) return;
     this.paused = p;
-    if (!p) this.pausedBySystem = false;
+    if (!p) {
+      this.pausedBySystem = false;
+      this.adaptive.settle();
+    }
     this.d.audio.setPaused(p);
     this.menu.refresh();
   }
@@ -215,7 +237,7 @@ export class XRMode {
   postSim(dt: number, t: number): void {
     const { ctl, tod, audio } = this.d;
     this.session.place(ctl.x, ctl.z, ctl.yaw);
-    this.proxies.update(ctl.x, ctl.z);
+    this.proxies.update(ctl.x, ctl.z, dt || 1 / 72);
     this.session.rig.updateMatrixWorld(true);
     const accel = dt > 0 ? Math.abs(ctl.speed - this.lastSpeed) / dt : 0;
     this.lastSpeed = ctl.speed;
@@ -245,19 +267,25 @@ export class XRMode {
     // the canvas and compile an sRGB-output variant of every scene shader.
     if (!(xrTarget as { isXRRenderTarget?: boolean } | null)?.isXRRenderTarget) return;
     const calls0 = renderer.info.render.calls;
-    if (XR_TIER.shadow && this.frame++ % XR_TIER.shadowEvery === 0) {
+    if (this.shadowEvery && this.frame++ % this.shadowEvery === 0) {
       // Casters are static scenery: a map a frame old (with the matrix it was drawn with) is still
       // right. The proxies already limit casters to the instances around her.
       renderer.xr.enabled = false;
       shadow.update(renderer, scene, center);
       renderer.xr.enabled = true;
       renderer.setRenderTarget(xrTarget);
-    } else if (!XR_TIER.shadow) G.uShadowOn.value = 0;
+    } else if (!this.shadowEvery) G.uShadowOn.value = 0;
     this.shadowCalls = renderer.info.render.calls - calls0;
     // No MSAA on the layer (emulator): coverage alpha falls back to the ordered dither.
     G.uDither.value = renderer.getContextAttributes()?.antialias ? 0 : 1;
     renderer.render(scene, this.session.cam);
     G.uDither.value = 0;
+    if (this.adaptive.slow > 0) {
+      // Emulator test (?xrslow=ms): stand-in frame cost that shrinks with the scene's triangles.
+      const until = performance.now() + (this.adaptive.slow * renderer.info.render.triangles) / 650e3;
+      while (performance.now() < until);
+    }
+    if (!this.paused) this.adaptive.tick(interval);
     this.fps.tick(interval / 1000, renderer.info.render.calls - calls0);
   }
 
@@ -277,9 +305,18 @@ export class XRMode {
       fps: this.fps.fps,
       calls: this.fps.calls,
       shadowCalls: this.shadowCalls,
+      level: this.adaptive.current.name,
+      levelFps: Math.round(this.adaptive.fps),
+      target: this.adaptive.target,
     };
   }
   skip(dist: number): void {
     this.dist = dist;
   }
+}
+
+/** The display rate the session runs at, when the browser reports it (Quest Browser does). */
+function renderer_frameRate(renderer: THREE.WebGLRenderer): number | undefined {
+  const r = (renderer.xr.getSession() as (XRSession & { frameRate?: number }) | null)?.frameRate;
+  return r && Number.isFinite(r) && r > 0 ? r : undefined;
 }

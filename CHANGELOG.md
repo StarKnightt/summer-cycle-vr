@@ -5,6 +5,29 @@ Summer Cycle existed before the Meta VR Start Developer Competition 2026 as a de
 during the competition window, from 27 September 2026, on the `webxr-hands` branch. It is the
 "significant update" for the Adapted / Significantly Updated Experience division.
 
+## 2026-09-28: Adaptive quality in the headset
+
+- `src/xr/adaptive.ts`: the XR frame loop measures real frame intervals. When 1.5 s of frames
+  average under 90% of the display rate (the session's `frameRate`, else 72; Quest Browser is asked
+  for 72 Hz), it steps one level lighter:
+  - **L0**: the tier the session starts on (Quest default, or `xrlite`).
+  - **L1**: smaller detail radii, the sun shadow every third frame, 180 m view, full foveation.
+  - **L2**: lite radii, no sun shadow, 140 m view.
+  - **L3** (emergency): shortest radii, half the grass and flowers, no shadow, 100 m view.
+- Steps back up need 4 s of clear headroom (average at the target, no slow frame) and at least
+  10 s at the level; a level left again soon after climbing into it waits twice as long. Frames
+  are ignored for 2 s after entering, resuming or changing level.
+- Nothing recompiles: levels change instance radii, grass thinning, chunk visibility, a shadow
+  uniform and foveation only. Radii and thinning ease in over about a second, so detail fades at
+  the edges instead of popping.
+- The level shows in the `?xrfps=1` readout and the wrist menu's frame rate row.
+- `?xrslow=ms` (emulator test) adds a frame cost that shrinks with the scene's triangles;
+  `scripts/xr-adapt.mjs` checks step down, settle, step up and no shader compiles.
+- Fixed: the headset scenery proxies only refilled while detail was easing (a `NaN` distance
+  check), so a stationary start could show no grass or trees until the bike moved.
+- The audio settings key no longer carries the old project name (`summer-cycle:audio`; the old
+  key is moved over once and removed).
+
 ## 2026-09-27: Summer Cycle VR, phase 2 (Quest performance)
 
 Measured with `scripts/xr-probe.mjs` in the emulator at the shop row, Quest tier, per eye:

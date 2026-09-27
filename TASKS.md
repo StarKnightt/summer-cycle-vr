@@ -32,6 +32,7 @@ The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Ver
 - [x] Phase 1: seated WebXR ride, hands on the bars (steer, pinch brake, bell), sun dial, wrist menu, pause/resume by hand, comfort vignette + mode, guided ride to the shrine, Quest render tier, IWER emulator captures (`scripts/xr-shots.mjs`, 14/14 checks, shots in `shots/xr/`)
 - [ ] Measure on a real Quest 3 / 3S (no headset here): fps at 72 Hz, hand grab distances, pinch-vs-grip false brakes, cold start time
 - [x] Headset budget (phase 2): 114 calls / 325k tris per eye (lite 52 / 143k), shadow 56 calls every other frame; instancing proxies, merged bike, lighter sky
+- [x] Adaptive headset quality (L0 to L3, no recompiles), verified in the emulator with `?xrslow` (`scripts/xr-adapt.mjs`)
 - [ ] Cold start: warm-up draws are ~10 s of ~15 s in the emulator (ANGLE/D3D11 first-use work); measure on Quest before restructuring
 - [ ] Multiview: only in three's WebGPURenderer (would need the materials ported to TSL)
 - [ ] Headset look: cheap ink (inverted hulls on houses / poles) and a sun glow to replace the lost post chain

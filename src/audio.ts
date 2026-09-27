@@ -44,7 +44,9 @@ export interface RideAudioExtras {
   evening?: number;
 }
 
-const PREFS_KEY = "ghibli-ride:audio";
+const PREFS_KEY = "summer-cycle:audio";
+/** Where earlier builds kept the same prefs (moved over once, then removed). */
+const OLD_PREFS_KEY = "ghibli-ride:audio";
 const FADE_IN = 2.5;
 
 export class RideAudio {
@@ -57,7 +59,13 @@ export class RideAudio {
 
   constructor() {
     try {
-      const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "{}") as { volume?: number; muted?: boolean };
+      let raw = localStorage.getItem(PREFS_KEY);
+      const old = localStorage.getItem(OLD_PREFS_KEY);
+      if (old !== null) {
+        if (raw === null) localStorage.setItem(PREFS_KEY, (raw = old));
+        localStorage.removeItem(OLD_PREFS_KEY);
+      }
+      const p = JSON.parse(raw ?? "{}") as { volume?: number; muted?: boolean };
       if (typeof p.volume === "number" && Number.isFinite(p.volume)) this.vol = Math.min(1, Math.max(0, p.volume));
       if (typeof p.muted === "boolean") this.mute = p.muted;
     } catch {

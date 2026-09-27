@@ -23,8 +23,9 @@ interface Source {
   /** Proxy for the near band and (trees) the far band. */
   near: Proxy | null;
   far: Proxy | null;
-  rNear: number;
-  rFar: number;
+  kind: "tree" | "distant" | "fine" | "other";
+  /** Fine detail: its own chunk cull distance caps the radius. */
+  cap: number;
   fade: boolean;
 }
 
@@ -49,8 +50,20 @@ export class Proxies {
   private lastX = NaN;
   private lastZ = NaN;
   active = false;
+  /** Radii in use, easing toward `target` so a quality change fades instead of popping. */
+  private r: ProxyRadii;
+  private target: ProxyRadii;
+  /** Fine detail keeps every `thin`-th instance; the others fade out over `thinK` 0 → 1. */
+  private thin = 1;
+  private thinK = 0;
+  private thinTo = 0;
+  private tick = 0;
+  /** Cost of the last refill (ms), for the probes. */
+  refillMs = 0;
 
-  constructor(private world: World, private r: ProxyRadii) {
+  constructor(private world: World, radii: ProxyRadii) {
+    this.r = { ...radii };
+    this.target = { ...radii };
     this.group.name = "xr-proxies";
     this.group.visible = false;
     for (const c of world.chunks)
@@ -63,8 +76,8 @@ export class Proxies {
         const nearGeo = tree ? (u.near as THREE.BufferGeometry) : im.geometry;
         const near = this.proxy(nearGeo, im);
         const far = tree ? this.proxy(u.far as THREE.BufferGeometry, im) : null;
-        const rNear = tree ? r.hero : u.distant ? r.trees : fine ? Math.min(r.fine, u.cull) : r.other;
-        this.sources.push({ chunk: c.group, near, far, rNear, rFar: tree ? r.trees : 0, fade: fine, ...sortByZ(im) });
+        const kind = tree ? "tree" : u.distant ? "distant" : fine ? "fine" : "other";
+        this.sources.push({ chunk: c.group, near, far, kind, cap: fine ? u.cull : Infinity, fade: fine, ...sortByZ(im) });
       }
     for (const p of this.proxies.values()) {
       p.mesh.instanceMatrix = new THREE.InstancedBufferAttribute(new Float32Array(p.n * 16), 16);
@@ -106,14 +119,48 @@ export class Proxies {
     this.lastX = NaN;
   }
 
-  /** Refill around (px, pz) once she has moved far enough to matter. */
-  update(px: number, pz: number): void {
+  /** New radii and grass thinning (quality levels); eased in over about a second. */
+  setDetail(radii: ProxyRadii, thin: number): void {
+    Object.assign(this.target, radii);
+    if (thin > 1) this.thin = thin;
+    this.thinTo = thin > 1 ? 1 : 0;
+  }
+
+  /** Jump straight to the target radii (session start: nothing on screen yet). */
+  snap(): void {
+    Object.assign(this.r, this.target);
+    this.thinK = this.thinTo;
+    this.lastX = NaN;
+  }
+
+  /** Refill around (px, pz) once she has moved far enough to matter, or while detail is easing. */
+  update(px: number, pz: number, dt: number): void {
     if (!this.active) return;
-    if (Math.hypot(px - this.lastX, pz - this.lastZ) < 0.75) return;
+    let easing = false;
+    const k = Math.min(1, dt * 1.6);
+    for (const key of ["hero", "trees", "fine", "other"] as const) {
+      const d = this.target[key] - this.r[key];
+      if (Math.abs(d) > 0.05) {
+        this.r[key] += d * k;
+        easing = true;
+      } else this.r[key] = this.target[key];
+    }
+    if (Math.abs(this.thinTo - this.thinK) > 0.01) {
+      this.thinK += (this.thinTo - this.thinK) * k;
+      easing = true;
+    } else {
+      this.thinK = this.thinTo;
+      if (this.thinK === 0) this.thin = 1;
+    }
+    // NaN (never filled, or reset) counts as moved.
+    const moved = !(Math.hypot(px - this.lastX, pz - this.lastZ) < 0.75);
+    if (!moved && !(easing && this.tick++ % 3 === 0)) return;
     this.lastX = px;
     this.lastZ = pz;
+    const t0 = performance.now();
     for (const p of this.proxies.values()) p.mesh.count = 0;
     for (const s of this.sources) this.gather(s, px, pz);
+    this.refillMs = performance.now() - t0;
     for (const p of this.proxies.values()) {
       p.mesh.visible = p.mesh.count > 0;
       p.mesh.instanceMatrix.clearUpdateRanges();
@@ -129,7 +176,11 @@ export class Proxies {
 
   private gather(s: Source, px: number, pz: number): void {
     const oz = s.chunk.position.z;
-    const R = Math.max(s.rNear, s.rFar);
+    const r = this.r;
+    const rNear = s.kind === "tree" ? r.hero : s.kind === "distant" ? r.trees : s.kind === "fine" ? Math.min(r.fine, s.cap) : r.other;
+    const rFar = s.kind === "tree" ? r.trees : 0;
+    const R = Math.max(rNear, rFar);
+    const thin = s.fade && this.thin > 1 ? this.thin : 1, thinK = this.thinK;
     const lz = pz - oz;
     const zs = s.z;
     // Lower bound of lz - R.
@@ -139,7 +190,7 @@ export class Proxies {
       if (zs[mid] < lz - R) lo = mid + 1;
       else hi = mid;
     }
-    const rn2 = s.rNear * s.rNear, rf2 = s.rFar * s.rFar;
+    const rn2 = rNear * rNear, rf2 = rFar * rFar;
     for (let i = lo; i < zs.length && zs[i] <= lz + R; i++) {
       const dx = s.x[i] - px, dz = zs[i] - lz;
       const d2 = dx * dx + dz * dz;
@@ -147,19 +198,23 @@ export class Proxies {
       if (d2 < rn2) p = s.near;
       else if (d2 < rf2) p = s.far;
       if (!p) continue;
+      // Thinned instances shrink away as thinK rises, and are skipped once gone.
+      const thinned = thin > 1 && i % thin !== 0;
+      if (thinned && thinK > 0.98) continue;
       const k = p.mesh.count++;
       const dst = p.mesh.instanceMatrix.array as Float32Array;
       const o = k * 16, j = i * 16;
       // Fade at the outer edge of the band by shrinking into the ground: fine detail over its last
       // 30%, trees (and the distant stands) over the last 20% of the lobed radius.
       let f = 1;
-      const edge = p === s.far ? s.rFar : s.rNear;
-      const band = s.fade ? 0.3 : p === s.far || s.rFar === 0 ? 0.2 : 0;
+      const edge = p === s.far ? rFar : rNear;
+      const band = s.fade ? 0.3 : p === s.far || rFar === 0 ? 0.2 : 0;
       if (band > 0) {
         const d = Math.sqrt(d2), e = edge * band;
         f = d > edge - e ? Math.max(0.02, (edge - d) / e) : 1;
         f = f * f * (3 - 2 * f);
       }
+      if (thinned) f *= Math.max(0.02, 1 - thinK);
       for (let q = 0; q < 12; q++) dst[o + q] = s.m[j + q] * f;
       dst[o + 12] = s.m[j + 12];
       dst[o + 13] = s.m[j + 13];
