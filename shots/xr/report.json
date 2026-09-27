@@ -1,0 +1,304 @@
+{
+  "checks": [
+    {
+      "name": "session starts from the loader button",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "hold",
+        "dist": 0,
+        "held": [
+          false,
+          false
+        ],
+        "steer": 0,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 0,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 0,
+        "calls": 0,
+        "shadowCalls": 313
+      }
+    },
+    {
+      "name": "guide opens on 'hold'",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "hold",
+        "dist": 0,
+        "held": [
+          false,
+          false
+        ],
+        "steer": 0,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 0,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 223.0631348334502,
+        "calls": 630,
+        "shadowCalls": 313
+      }
+    },
+    {
+      "name": "both hands hold the grips",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "brake",
+        "dist": 3,
+        "held": [
+          true,
+          true
+        ],
+        "steer": -0.01235391380977261,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 0,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 229.29432694233668,
+        "calls": 630,
+        "shadowCalls": 313
+      }
+    },
+    {
+      "name": "holding the bars rides (gentle ramp)",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "brake",
+        "dist": 16,
+        "held": [
+          true,
+          true
+        ],
+        "steer": -0.012353913884838853,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 0,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 235.10659493949265,
+        "calls": 614,
+        "shadowCalls": 313,
+        "speed": 4.122619182052288
+      }
+    },
+    {
+      "name": "turning the bars left steers left",
+      "pass": true,
+      "detail": {
+        "steer": 0.48045919151980143,
+        "yawRate": 0.17408822702230684
+      }
+    },
+    {
+      "name": "pinch brakes",
+      "pass": true,
+      "detail": {
+        "brake": 1,
+        "speed": 0.034920000001351585
+      }
+    },
+    {
+      "name": "touching the bell rings it and advances the guide",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "sun",
+        "dist": 38,
+        "held": [
+          true,
+          true
+        ],
+        "steer": 0.42922041371153513,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 0,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 238.6160270434148,
+        "calls": 602,
+        "shadowCalls": 315
+      }
+    },
+    {
+      "name": "dragging the sun scrubs the time of day",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "ride",
+        "dist": 69,
+        "held": [
+          true,
+          false
+        ],
+        "steer": 0.08530057574874218,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 2.289349350202488,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 242.83439490427864,
+        "calls": 620,
+        "shadowCalls": 331
+      }
+    },
+    {
+      "name": "palm toward the face opens the wrist menu",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "ride",
+        "dist": 93,
+        "held": [
+          false,
+          true
+        ],
+        "steer": -0.18957292263017592,
+        "brake": 0,
+        "paused": false,
+        "menu": true,
+        "sun": 2.288241120467976,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 230.0674335580268,
+        "calls": 612,
+        "shadowCalls": 333
+      }
+    },
+    {
+      "name": "poking Pause pauses (hands only)",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "ride",
+        "dist": 100,
+        "held": [
+          false,
+          false
+        ],
+        "steer": -3.7956904904044375e-8,
+        "brake": 0,
+        "paused": true,
+        "menu": true,
+        "sun": 2.288241120467976,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 229.65749356579997,
+        "calls": 592,
+        "shadowCalls": 318
+      }
+    },
+    {
+      "name": "a pinch resumes",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "ride",
+        "dist": 102,
+        "held": [
+          true,
+          true
+        ],
+        "steer": -0.012568535189422851,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 2.288241120467976,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 244.3349753694581,
+        "calls": 596,
+        "shadowCalls": 317
+      }
+    },
+    {
+      "name": "system menu (visibility) pauses and stays paused until a pinch",
+      "pass": true,
+      "detail": {
+        "blurred": true,
+        "back": true
+      }
+    },
+    {
+      "name": "arrival: stops at the torii and dusk comes",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "arrive",
+        "dist": 777,
+        "held": [
+          true,
+          true
+        ],
+        "steer": -0.008066292050392105,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 3,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 240.3940886699508,
+        "calls": 618,
+        "shadowCalls": 325,
+        "speed": 0.012936000000003844
+      }
+    },
+    {
+      "name": "leaving VR returns to the desktop ride",
+      "pass": true,
+      "detail": {
+        "presenting": false,
+        "fps": 147.5539710833826
+      }
+    }
+  ],
+  "programs": {
+    "beforeEnter": 79,
+    "afterEnter": 86
+  },
+  "menuQuat": [
+    0,
+    0.707,
+    -0.707,
+    0
+  ],
+  "perf": {
+    "fps": 236.82652457066484,
+    "calls": 618,
+    "note": "desktop GPU running the emulator; not Quest numbers"
+  },
+  "errors": []
+}

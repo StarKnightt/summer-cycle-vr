@@ -28,6 +28,13 @@ The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Ver
 - [ ] Character FPS unconfirmed on an idle GPU (GPU at 99% from other processes during `feature/face`); rider cost vs master: same mesh count (283 vs 281), +15k tris
 - [x] `refs/girl_model_sheet.png` committed (character target); `refs/web/` + `scripts/_refgrab.mjs` gitignored
 
+## VR (Meta VR Start competition, branch `webxr-hands`, see CHANGELOG.md)
+- [x] Phase 1: seated WebXR ride, hands on the bars (steer, pinch brake, bell), sun dial, wrist menu, pause/resume by hand, comfort vignette + mode, guided ride to the shrine, Quest render tier, IWER emulator captures (`scripts/xr-shots.mjs`, 14/14 checks, shots in `shots/xr/`)
+- [ ] Measure on a real Quest 3 / 3S (no headset here): fps at 72 Hz, hand grab distances, pinch-vs-grip false brakes, cold start time
+- [ ] Headset triangles: ~1.5M per eye in the emulator (trees, grass, flowers, ridges); per-instance tree LOD, lighter grass in XR
+- [ ] Headset look: cheap ink (inverted hulls on houses / poles) and a sun glow to replace the lost post chain
+- [ ] Demo video from the emulator (scripted hands), Devpost write-up
+
 ## Remaining
 - [x] Merge `feature/mouse`
 - [x] Pause menu (`feature/pause`): tap Esc = washi pause overlay (sim + render frozen, audio ducked, keys swallowed), hold Esc = free the mouse only; blur/tab switch pauses; loader click goes fullscreen + Keyboard Lock on Esc (`&fs=0` skips)
