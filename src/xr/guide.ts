@@ -42,14 +42,14 @@ export class Guide {
   arrived = false;
 
   constructor() {
-    this.panel = new Panel(0.42, 0.13, 1024, (g, w, h) => {
+    this.panel = new Panel(0.6, 0.18, 1024, (g, w, h) => {
       if (!this.title && !this.body) return;
       washiCard(g, w, h);
       if (this.title) text(g, this.title, w / 2, h * (this.body ? 0.33 : 0.5), 58, w * 0.86, INK, 400, 0.08);
       if (this.body) text(g, this.body, w / 2, h * (this.title ? 0.68 : 0.5), 40, w * 0.88, "rgba(58, 42, 34, 0.82)");
     });
     // Above the basket, a touch below eye level, tilted up to face her.
-    this.panel.mesh.position.set(0, 1.27, -0.78);
+    this.panel.mesh.position.set(0, 1.26, -0.9);
     this.panel.mesh.rotation.x = 0.28;
     this.group.add(this.panel.mesh);
     this.set("hold");

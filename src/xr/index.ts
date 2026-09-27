@@ -68,6 +68,9 @@ export class XRMode {
   private arriveT = -1;
   private started = false;
   readonly head = new THREE.Vector3();
+  /** Draw calls of the last headset frame: sun shadow pass, and in total. */
+  shadowCalls = 0;
+  private frame = 0;
   private rideIn = { ride: false, steer: 0, brake: 0, cruise: 4.2, accel: 0.55, assist: 0.5 };
 
   constructor(private d: Deps) {
@@ -222,12 +225,18 @@ export class XRMode {
     const { renderer, scene } = this.d;
     const xrTarget = renderer.getRenderTarget();
     const calls0 = renderer.info.render.calls;
-    if (XR_TIER.shadow) {
+    if (XR_TIER.shadow && this.frame++ % XR_TIER.shadowEvery === 0) {
+      // Casters are static scenery: a map a frame old (with the matrix it was drawn with) is still
+      // right, and the lobed distant trees throw the same toon-thresholded shadow for far fewer
+      // triangles than the leaf-card heroes.
       renderer.xr.enabled = false;
+      this.d.world.reflectLod(true);
       shadow.update(renderer, scene, center);
+      this.d.world.reflectLod(false);
       renderer.xr.enabled = true;
       renderer.setRenderTarget(xrTarget);
-    } else G.uShadowOn.value = 0;
+    } else if (!XR_TIER.shadow) G.uShadowOn.value = 0;
+    this.shadowCalls = renderer.info.render.calls - calls0;
     // No MSAA on the layer (emulator): coverage alpha falls back to the ordered dither.
     G.uDither.value = renderer.getContextAttributes()?.antialias ? 0 : 1;
     renderer.render(scene, this.session.cam);
@@ -250,6 +259,7 @@ export class XRMode {
       hands: [this.hands.left.tracked, this.hands.right.tracked],
       fps: this.fps.fps,
       calls: this.fps.calls,
+      shadowCalls: this.shadowCalls,
     };
   }
   skip(dist: number): void {

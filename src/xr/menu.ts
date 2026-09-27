@@ -45,6 +45,11 @@ export class WristMenu {
     this.panel.opacity = 0;
   }
 
+  /** World point on row `i`, `z` metres in front of the card (test hook). */
+  rowWorld(i: number, z: number, out: THREE.Vector3): THREE.Vector3 {
+    return this.panel.mesh.localToWorld(out.set(0, this.panel.h / 2 - PAD - 0.02 - ROW * (i + 0.5), z));
+  }
+
   refresh(): void {
     this.panel.redraw();
   }

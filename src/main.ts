@@ -22,6 +22,7 @@ import { Fireflies } from "./world/fireflies";
 import { Profiler } from "./render/profiler";
 import { specializeUber } from "./render/materials";
 import { XRMode, XR_TIER, QUEST, installXrOutput } from "./xr";
+import { arcPoint } from "./xr/sundial";
 
 const params = new URLSearchParams(location.search);
 // Dev only: Meta's IWER emulates a Quest 3 (with hands) in a desktop browser.
@@ -59,6 +60,7 @@ renderer.autoClear = true;
 renderer.info.autoReset = false;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
+if (import.meta.env.DEV) Object.assign(window, { __THREE: THREE, __rideRenderer: renderer });
 G.uLeafTex.value = leafAtlas(renderer);
 G.uSignTex.value = signAtlas(renderer);
 
@@ -479,7 +481,6 @@ function frame(now: number) {
   renderer.info.reset();
   if (inXR) {
     xr.render(shadow, shadowCenter, interval);
-    frames++;
     return;
   }
   const cpuR = performance.now();
@@ -553,6 +554,19 @@ window.__ride = {
   world,
   get aaLog() {
     return AA.log;
+  },
+  /** Emulator captures: bike-space points on the sun arc and on a wrist-menu row. */
+  xrRoot: rider.root,
+  xrArc(s: number) {
+    return arcPoint(s, new THREE.Vector3()).toArray();
+  },
+  xrMenuRow(i: number) {
+    if (!xr.menu.shown) return null;
+    const at = (z: number) => rider.root.worldToLocal(xr.menu.rowWorld(i, z, new THREE.Vector3())).toArray();
+    return { front: at(0.04), through: at(-0.006) };
+  },
+  get ctlYawRate() {
+    return ctl.yawRate;
   },
   /** Headset test hooks (state, skip ahead on the guided ride, menu actions). */
   xr: {

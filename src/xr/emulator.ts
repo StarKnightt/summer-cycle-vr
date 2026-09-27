@@ -7,7 +7,8 @@
 export async function installEmulator(mode: string | null): Promise<void> {
   const { XRDevice, metaQuest3 } = await import("iwer");
   const dev = new XRDevice(metaQuest3);
-  dev.installRuntime();
+  // Chromium exposes a native navigator.xr even with no headset attached.
+  dev.installRuntime({ forceInstall: true });
   dev.stereoEnabled = new URLSearchParams(location.search).get("stereo") === "1";
   dev.primaryInputMode = mode === "pads" ? "controller" : "hand";
   (window as unknown as { __xrdev: unknown }).__xrdev = dev;

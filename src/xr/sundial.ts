@@ -79,7 +79,8 @@ export class SunDial {
         if (!h.tracked && !h.pad) continue;
         const d = toLocal(h.pinchPoint).distanceTo(this.sun.position);
         near = Math.min(near, d);
-        if (h.pinchStart && d < GRAB) this.held = h;
+        // A pinch that closes on the sun, or a pinching hand moved into it, both take hold.
+        if (h.pinching && d < GRAB) this.held = h;
       }
     if (this.held) {
       // Nearest point on the arc to the pinch, eased so small tremors don't flicker the sky.
@@ -95,6 +96,7 @@ export class SunDial {
       this.s = next;
       this.tod.scrub(this.s);
     } else this.s = this.tod.pos;
+    this.s = Number.isFinite(this.s) ? Math.min(3, Math.max(0, this.s)) : 0;
 
     const k = this.held ? 1 : Math.max(0, 1 - (near - GRAB) / (HOVER - GRAB));
     this.hover += (Math.min(1, k) - this.hover) * Math.min(1, dt * 10);
@@ -107,7 +109,9 @@ export class SunDial {
     const pulse = this.beckon * (0.5 + 0.5 * Math.sin(t * 3));
     this.sun.scale.setScalar(1 + this.hover * 0.35 + pulse * 0.25);
     this.haloMat.uniforms.uAmt.value = 0.45 + this.hover * 0.5 + pulse * 0.5;
-    this.arcMat.uniforms.uOpacity.value = 0.22 + this.hover * 0.4 + this.beckon * 0.2;
+    // The arc is a faint guide line: it only brightens when a hand comes near or the guide asks.
+    this.arcMat.uniforms.uOpacity.value = 0.08 + this.hover * 0.4 + this.beckon * 0.2;
+    this.haloMat.uniforms.uAmt.value *= 1 - 0.4 * Math.min(1, Math.max(0, this.s - 2));
   }
 
   get grabbed(): boolean {

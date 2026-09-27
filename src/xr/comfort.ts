@@ -58,14 +58,14 @@ export class FpsMeter {
   calls = 0;
 
   constructor() {
-    this.panel = new Panel(0.07, 0.022, 256, (g, w, h) => {
+    this.panel = new Panel(0.13, 0.034, 384, (g, w, h) => {
       g.fillStyle = "rgba(20, 16, 12, 0.6)";
       g.beginPath();
       g.roundRect(0, 0, w, h, 14);
       g.fill();
       text(g, `${Math.round(this.fps)} fps  ${this.calls} calls`, w / 2, h / 2, 40, w * 0.9, this.fps >= 70 ? "#cfe8b0" : this.fps >= 58 ? "#f1d58a" : "#f09a80");
     });
-    this.panel.mesh.position.set(0.1, -0.12, -0.5);
+    this.panel.mesh.position.set(0.12, -0.14, -0.6);
     this.panel.mesh.renderOrder = 1001;
     (this.panel.mesh.material as THREE.ShaderMaterial).depthTest = false;
   }

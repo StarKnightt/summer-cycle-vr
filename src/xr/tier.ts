@@ -22,9 +22,12 @@ export const XR_TIER = {
   shadow: !LITE,
   shadowSize: QUEST ? 1024 : 2048,
   shadowHalf: QUEST ? 38 : 55,
+  /** Refresh the sun shadow every n-th headset frame. */
+  shadowEvery: num("xrshadow", QUEST ? 2 : 1),
   /** Fine detail (grass, rice, flowers) drops out this much sooner; whole chunks past `far`. */
-  cullK: LITE ? 0.3 : 0.42,
-  far: num("xrfar", LITE ? 220 : 300),
-  treeFar: LITE ? 45 : 70,
+  cullK: LITE ? 0.28 : 0.35,
+  far: num("xrfar", LITE ? 180 : 240),
+  /** Hero leaf-card trees out to this distance; -1 = the lobed distant trees everywhere (Quest). */
+  treeFar: params.get("xrtrees") === "hero" ? 70 : QUEST ? -1 : 70,
   showFps: params.get("xrfps") === "1",
 };

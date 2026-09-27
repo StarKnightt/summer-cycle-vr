@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { XR_OUT } from "./grade";
 
-/** Where her eyes sit on the bike (bike space: ground origin, -Z forward), upright over the saddle. */
-export const EYE = new THREE.Vector3(0, 1.5, 0.14);
+/**
+ * Where the player's eyes sit on the bike (bike space: ground origin, -Z forward): upright over the
+ * saddle, far enough back that the grips sit ~45° below straight ahead, inside the headset's view.
+ */
+export const EYE = new THREE.Vector3(0, 1.44, 0.2);
 
 type Hooks = {
   /** Session is live (the first XR frame follows). */
