@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Summer Cycle dynamic captions</title>
+<!-- Word-timed captions on a washi pill. render({ w, h, bottom, size, phrases: [{ t0, t1, words:
+     [{ w, s, key }] }] }) then seek(t). A golden marker glides to the word being spoken; spoken
+     words turn ink, key words are larger, italic and warm. Pure function of t. -->
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  #root { position: relative; overflow: hidden; font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  .ph { position: absolute; left: 50%; display: none; transform-origin: 50% 100%; }
+  .pill { position: relative; display: flex; align-items: baseline; white-space: nowrap; border-radius: 0.5em;
+    padding: 0.2em 0.62em 0.28em; background: rgba(247, 241, 225, 0.95);
+    box-shadow: 0 0.16em 0.6em rgba(30, 22, 14, 0.26), 0 0.02em 0.08em rgba(30, 22, 14, 0.18), inset 0 0 0 1px rgba(120, 100, 76, 0.22); }
+  .pill .grain { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; mix-blend-mode: multiply; opacity: 0.6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.28 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .mark { position: absolute; border-radius: 0.22em; background: linear-gradient(180deg, rgba(240, 186, 104, 0.5), rgba(228, 160, 84, 0.42)); }
+  .w { position: relative; display: inline-block; letter-spacing: 0.01em; color: #2f3944; }
+  .w.key { font-style: italic; font-size: 1.16em; letter-spacing: 0.015em; }
+  .sp { display: inline-block; width: 0.27em; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const root = document.getElementById("root");
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+const outBack = (x, k = 1.25) => 1 + (k + 1) * Math.pow(x - 1, 3) + k * Math.pow(x - 1, 2);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const ENTER = 0.34, EXIT = 0.16, GLIDE = 0.13;
+let S = null, els = [];
+
+window.render = (spec) => {
+  S = spec;
+  root.style.width = spec.w + "px";
+  root.style.height = spec.h + "px";
+  root.innerHTML = spec.phrases.map((p, i) => `<div class="ph" id="ph${i}" style="bottom:${spec.bottom}px;font-size:${spec.size}px">
+      <div class="pill"><div class="grain"></div><div class="mark"></div>${p.words.map((w, j) => `${j ? '<span class="sp"></span>' : ""}<span class="w${w.key ? " key" : ""}">${esc(w.w)}</span>`).join("")}</div></div>`).join("");
+  return document.fonts.ready.then(() => {
+    els = spec.phrases.map((p, i) => {
+      const el = document.getElementById(`ph${i}`);
+      el.style.display = "block";
+      const pill = el.querySelector(".pill"), pr = pill.getBoundingClientRect();
+      const ws = [...el.querySelectorAll(".w")];
+      const rects = ws.map((w) => { const r = w.getBoundingClientRect(); return { x: r.left - pr.left, y: r.top - pr.top, w: r.width, h: r.height }; });
+      el.style.display = "none";
+      return { el, pill, mark: el.querySelector(".mark"), ws, rects, width: pr.width };
+    });
+    return els.map((e) => Math.round(e.width));
+  });
+};
+
+window.seek = (t) => {
+  S.phrases.forEach((p, i) => {
+    const E = els[i];
+    // Back-to-back phrases hand over instead of cross-fading: the outgoing pill is gone by the time
+    // the incoming one shows, so two pills never stack.
+    const next = S.phrases[i + 1], prev = S.phrases[i - 1];
+    const handOut = next && next.t0 <= p.t1 + 0.01, handIn = prev && p.t0 <= prev.t1 + 0.01;
+    const x0 = handOut ? p.t1 - 0.1 : p.t1, xd = handOut ? 0.12 : EXIT;
+    const vis = t >= p.t0 && t < x0 + xd;
+    E.el.style.display = vis ? "block" : "none";
+    if (!vis) return;
+    const a = clamp((t - p.t0) / ENTER), x = clamp((t - x0) / xd);
+    const q = outBack(a);
+    E.el.style.opacity = (handIn ? clamp((t - p.t0 - 0.02) / 0.12) : clamp(a * 2.2)) * (1 - x);
+    E.el.style.transform = `translateX(-50%) translateY(${(1 - q) * 24 - x * 12}px) scale(${0.95 + 0.05 * q})`;
+    // Current word: the last one whose start has passed.
+    let cur = -1;
+    p.words.forEach((w, j) => { if (t >= w.s - 0.04) cur = j; });
+    p.words.forEach((w, j) => {
+      const el = E.ws[j];
+      const spoken = j <= cur;
+      const pop = j === cur ? outCubic(clamp((t - w.s + 0.04) / 0.12)) * (1 - clamp((t - (p.words[j + 1]?.s ?? p.t1) + 0.04) / 0.12)) : 0;
+      el.style.color = w.key ? (spoken ? "#a8501f" : "rgba(168, 80, 31, 0.42)") : spoken ? "#2f3944" : "rgba(47, 57, 68, 0.4)";
+      el.style.transform = `translateY(${-pop * 3}px) scale(${1 + pop * 0.045})`;
+    });
+    // Marker glides from the previous word to the current one, and fades after the last word ends.
+    const m = E.mark;
+    if (cur < 0) { m.style.opacity = 0; return; }
+    const r1 = E.rects[cur], r0 = E.rects[Math.max(0, cur - 1)];
+    const g = cur === 0 ? 1 : outCubic(clamp((t - p.words[cur].s + 0.04) / GLIDE));
+    const pad = S.size * 0.12;
+    const lastEnd = p.words[p.words.length - 1].e ?? p.t1;
+    const fade = cur === p.words.length - 1 ? 1 - clamp((t - lastEnd - 0.1) / 0.3) : 1;
+    m.style.opacity = (cur === 0 ? outCubic(clamp((t - p.words[0].s + 0.04) / 0.12)) : 1) * fade;
+    m.style.left = `${lerp(r0.x, r1.x, g) - pad}px`;
+    m.style.width = `${lerp(r0.w, r1.w, g) + 2 * pad}px`;
+    m.style.top = `${lerp(r0.y, r1.y, g) + r1.h * 0.08}px`;
+    m.style.height = `${lerp(r0.h, r1.h, g) * 0.9}px`;
+  });
+};
+window.bounds = () => [];
+</script>
+</body>
+</html>

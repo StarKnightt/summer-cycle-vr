@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Summer Cycle video graphics</title>
+<style>
+  /* Palette and type from the game's index.html (loader, pause card, Enter VR button). */
+  :root {
+    --paper: #f4ecd8; --paper-hi: #f6efdc; --ink: #2f3944; --ink-2: #3d4650; --muted: #6d675d;
+    --muted-2: #8a8274; --dd: #6f685d; --dt: #4a4d52; --accent: #d98a4e; --seal: #b9463c; --cream: #fff8ec;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --title: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --mincho: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "MS PMincho", "MS Mincho", "Noto Serif CJK JP", serif;
+  }
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  #root { position: relative; overflow: hidden; font-family: var(--serif); color: var(--ink);
+    -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  .abs { position: absolute; }
+  .full { position: absolute; inset: 0; }
+  .grain { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.28 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.018' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.47 0 0 0 0 0.33 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='900' height='900' filter='url(%23f)'/%3E%3C/svg%3E"); }
+  .fibres { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.09' numOctaves='2' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.42 0 0 0 0 0.3 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23g)'/%3E%3C/svg%3E"); }
+
+  /* ------------------------------------------------------------ cards */
+  .paperbg { position: absolute; inset: 0; background: var(--paper); }
+  .wash { position: absolute; inset: 0; }
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ttl { display: flex; align-items: flex-start; gap: 0.2em; color: var(--ink); }
+  .ttl h1 { margin: 0; font-size: 1em; font-weight: 400; font-family: var(--title); letter-spacing: 0.14em; line-height: 1.1;
+    text-shadow: 0 0 1px rgba(47, 57, 68, 0.35); opacity: 0.92; white-space: nowrap; }
+  .seal { margin-top: 0.24em; border-radius: 0.16em; background: var(--seal); color: #f7ecd9; display: grid; place-items: center;
+    box-shadow: inset 0 0 0 0.06em rgba(247, 236, 217, 0.55); font-family: var(--mincho); opacity: 0.9; }
+  .rule { height: 1px; background: repeating-linear-gradient(90deg, rgba(120, 104, 80, 0.5) 0 9px, transparent 9px 17px); }
+  .sub { font-style: italic; color: var(--muted); white-space: nowrap; }
+  .kick { text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .handle { color: var(--muted-2); letter-spacing: 0.18em; white-space: nowrap; }
+
+  .stats { display: grid; grid-template-columns: auto auto; column-gap: 1.1em; row-gap: 0.62em; align-items: baseline; }
+  .stats .dt { text-align: right; font-weight: 600; color: var(--dt); letter-spacing: 0.06em; white-space: nowrap; }
+  .stats .dd { color: var(--dd); font-style: italic; letter-spacing: 0.03em; white-space: nowrap; }
+  .stats .dd b { font-style: normal; font-weight: 400; color: var(--ink); font-family: var(--title); letter-spacing: 0.02em; }
+  .note { font-style: italic; color: var(--muted-2); letter-spacing: 0.06em; white-space: nowrap; }
+
+  /* ------------------------------------------------------------ captions (lower thirds) */
+  .cap { position: absolute; display: flex; align-items: center; gap: 22px; padding: 20px 34px 22px 24px;
+    background: rgba(246, 239, 220, 0.95); border: 1px solid rgba(58, 42, 34, 0.22); border-radius: 18px;
+    box-shadow: 0 10px 34px rgba(30, 22, 14, 0.3), 0 1px 0 rgba(255, 255, 255, 0.5) inset; overflow: hidden; }
+  .cap .grain { opacity: 0.55; border-radius: 18px; }
+  .cap .dot { position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--accent);
+    box-shadow: inset 0 0 0 2px rgba(255, 248, 236, 0.35); display: grid; place-items: center; }
+  .cap .dot i { width: 14px; height: 14px; border-radius: 50%; background: var(--cream); opacity: 0.92; }
+  .cap .txt { position: relative; display: flex; flex-direction: column; gap: 6px; }
+  .cap .k { font-size: 17px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--muted-2); white-space: nowrap; }
+  .cap .l { font-size: 44px; letter-spacing: 0.025em; line-height: 1.12; color: var(--ink); white-space: nowrap; }
+
+  /* ------------------------------------------------------------ callout */
+  .callout svg { position: absolute; overflow: visible; }
+  .pill { position: absolute; padding: 8px 18px 10px; border-radius: 999px; background: rgba(246, 239, 220, 0.95);
+    border: 1px solid rgba(58, 42, 34, 0.22); box-shadow: 0 6px 20px rgba(30, 22, 14, 0.3);
+    font-style: italic; font-size: 30px; letter-spacing: 0.05em; color: var(--ink); white-space: nowrap; }
+
+  /* ------------------------------------------------------------ split */
+  .frame { position: absolute; border-radius: 10px; }
+  .frame.shadow { box-shadow: 0 16px 40px rgba(40, 28, 18, 0.28), 0 2px 6px rgba(40, 28, 18, 0.18); background: #d8ccb2; }
+  .frame.line { box-shadow: inset 0 0 0 1px rgba(58, 42, 34, 0.35), inset 0 0 0 5px rgba(246, 239, 220, 0.9); }
+  .lbl { position: absolute; text-align: center; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const root = document.getElementById("root");
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+// "**307** to **114**" -> bold numbers.
+const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+// data-a="kind start dur"
+const A = (kind, start, dur) => `data-a="${kind} ${start} ${dur}"`;
+
+function sky(kind) {
+  // Soft washes that echo the loader: pale sky at the top, warm paper below, faint hills.
+  const top = kind === "dusk"
+    ? "radial-gradient(120% 70% at 70% -10%, rgba(232, 160, 140, 0.42), rgba(232, 180, 150, 0.16) 45%, rgba(244, 236, 216, 0) 70%)"
+    : "radial-gradient(120% 70% at 50% -12%, rgba(150, 196, 196, 0.42), rgba(170, 205, 198, 0.16) 45%, rgba(244, 236, 216, 0) 70%)";
+  const sun = kind === "dusk"
+    ? `<div class="abs" style="left:1580px;top:780px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle, rgba(240,150,110,0.55), rgba(240,160,120,0.18) 50%, rgba(240,160,120,0) 70%)"></div>`
+    : `<div class="abs" style="left:1420px;top:150px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle, rgba(250,220,130,0.6), rgba(250,215,140,0.2) 48%, rgba(250,215,140,0) 70%)"></div>`;
+  const hill = kind === "dusk" ? "rgba(120, 96, 110, 0.16)" : "rgba(130, 128, 110, 0.14)";
+  const hill2 = kind === "dusk" ? "rgba(120, 96, 110, 0.10)" : "rgba(120, 130, 110, 0.09)";
+  return `
+    <div class="paperbg"></div>
+    <div class="wash" style="background:${top}"></div>
+    <div class="wash" style="background:radial-gradient(140% 90% at 50% 45%, rgba(246,239,220,0) 55%, rgba(214,196,160,0.35) 100%)"></div>
+    ${sun}
+    <svg class="abs" style="left:0;bottom:0;filter:blur(1.5px)" width="1920" height="420" viewBox="0 0 1920 420">
+      <path d="M0 250 C 220 170, 420 190, 620 230 S 1000 170, 1240 210 S 1640 160, 1920 220 L1920 420 L0 420Z" fill="${hill2}"/>
+      <path d="M0 300 C 260 250, 520 270, 760 300 S 1180 250, 1460 290 S 1780 270, 1920 290 L1920 420 L0 420Z" fill="${hill}"/>
+    </svg>
+    <div class="grain"></div><div class="fibres"></div>`;
+}
+
+const builders = {
+  paper(s) {
+    return `<div class="paperbg"></div>
+      <div class="wash" style="background:radial-gradient(140% 90% at 50% 40%, rgba(246,239,220,0) 50%, rgba(214,196,160,0.32) 100%)"></div>
+      <div class="grain"></div><div class="fibres"></div>`;
+  },
+
+  title(s) {
+    return `${sky(s.sky || "day")}
+      <div class="center">
+        <div class="ttl" style="font-size:132px" ${A("track", 0.15, 1.2)}>
+          <h1>${esc(s.title)}</h1>
+          <div class="seal" style="font-size:0.23em;width:1.7em;height:1.7em;margin-top:0.75em" ${A("stamp", 1.0, 0.35)}>夏</div>
+        </div>
+        <div class="rule" style="width:120px;margin:34px 0 30px" ${A("grow", 0.8, 0.8)}></div>
+        <div class="sub" style="font-size:36px;letter-spacing:0.16em" ${A("rise", 1.05, 0.9)}>${esc(s.sub)}</div>
+        ${s.handle ? `<div class="handle" style="font-size:28px;margin-top:40px" ${A("rise", 1.5, 0.8)}>${esc(s.handle)}</div>` : ""}
+        ${s.url ? `<div class="handle" style="font-size:24px;margin-top:14px;letter-spacing:0.08em" ${A("rise", 1.7, 0.8)}>${esc(s.url)}</div>` : ""}
+      </div>`;
+  },
+
+  stats(s) {
+    const rows = s.rows.map(([k, v], i) =>
+      `<div class="dt" style="font-size:30px" ${A("rise", 0.7 + i * 0.28, 0.6)}>${esc(k)}</div>
+       <div class="dd" style="font-size:38px" ${A("rise", 0.78 + i * 0.28, 0.6)}>${rich(v)}</div>`).join("");
+    return `${sky("day")}
+      <div class="center">
+        <div class="kick" style="font-size:20px;letter-spacing:0.42em;text-indent:0.42em" ${A("fade", 0.05, 0.6)}>${esc(s.kicker)}</div>
+        <div style="margin-top:14px;font-size:66px;font-style:italic;letter-spacing:0.06em;font-family:var(--title);opacity:0.92;white-space:nowrap" ${A("rise", 0.15, 0.8)}>${esc(s.heading)}</div>
+        <div class="rule" style="width:96px;margin:30px 0 40px" ${A("grow", 0.45, 0.7)}></div>
+        <div class="stats">${rows}</div>
+        <div class="note" style="font-size:22px;margin-top:52px" ${A("fade", 0.7 + s.rows.length * 0.28 + 0.2, 0.8)}>${esc(s.note)}</div>
+      </div>`;
+  },
+
+  caption(s) {
+    const pos = s.pos || "bl";
+    const at = { bl: `left:${s.x ?? 72}px;bottom:${s.y ?? 280}px`, tl: `left:${s.x ?? 72}px;top:${s.y ?? 72}px`,
+      tr: `right:${s.x ?? 72}px;top:${s.y ?? 72}px`, br: `right:${s.x ?? 72}px;bottom:${s.y ?? 280}px` }[pos];
+    return `<div class="cap" style="${at}" ${A("capin", 0, 0.5)}>
+        <div class="grain"></div>
+        <div class="dot"><i></i></div>
+        <div class="txt">
+          ${s.kicker ? `<div class="k" ${A("fade", 0.18, 0.4)}>${esc(s.kicker)}</div>` : ""}
+          <div class="l" ${A("wipe", 0.12, 0.5)}>${esc(s.text)}</div>
+        </div>
+      </div>`;
+  },
+
+  callout(s) {
+    const r = s.r || 70, x = s.x, y = s.y, len = 2 * Math.PI * r;
+    const lx = s.labelSide === "left" ? `right:${1920 - x + r + 18}px` : `left:${x + r + 18}px`;
+    return `<div class="callout full">
+      <svg style="left:0;top:0" width="${s.w || 1920}" height="${s.h || 1080}">
+        <defs><filter id="sh" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#281c12" flood-opacity="0.55"/></filter></defs>
+        <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#fff8ec" stroke-width="5" stroke-linecap="round" filter="url(#sh)"
+          stroke-dasharray="${len}" transform="rotate(-90 ${x} ${y})" data-len="${len}" ${A("draw", 0, 0.5)}/>
+        <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#d98a4e" stroke-width="3" ${A("pulse", 0.45, 0.8)}/>
+      </svg>
+      ${s.label ? `<div class="pill" style="${lx};top:${y - 28}px" ${A("rise", 0.3, 0.45)}>${esc(s.label)}</div>` : ""}
+    </div>`;
+  },
+
+  splitbg(s) {
+    return `${builders.paper(s)}
+      ${s.boxes.map((b) => `<div class="frame shadow" style="left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px"></div>`).join("")}`;
+  },
+  splitfg(s) {
+    return s.boxes.map((b) => `
+      <div class="frame line" style="left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px"></div>
+      ${b.kicker ? `<div class="lbl kick" style="left:${b.x}px;width:${b.w}px;top:${b.y - 52}px;font-size:19px;letter-spacing:0.42em;text-indent:0.42em">${esc(b.kicker)}</div>` : ""}
+      <div class="lbl" style="left:${b.x}px;width:${b.w}px;top:${b.y + b.h + 30}px;font-size:44px;font-style:italic;letter-spacing:0.06em;color:var(--ink)">${esc(b.label)}</div>
+    `).join("");
+  },
+
+  // Vertical / square teaser layers.
+  teaserbg(s) {
+    return `${builders.paper(s)}
+      <div class="wash" style="background:radial-gradient(120% 40% at 50% -5%, rgba(150,196,196,0.38), rgba(244,236,216,0) 70%)"></div>
+      <div class="frame shadow" style="left:${s.box.x}px;top:${s.box.y}px;width:${s.box.w}px;height:${s.box.h}px;border-radius:0"></div>`;
+  },
+  teaserhook(s) {
+    const lines = s.lines.map((l, i) => `<div ${A("rise", 0.1 + i * 0.22, 0.6)}>${esc(l)}</div>`).join("");
+    return `<div class="abs" style="left:0;right:0;top:${s.top}px;text-align:center;font-family:var(--title);font-size:${s.size || 76}px;line-height:1.16;letter-spacing:0.02em;color:var(--ink)">${lines}</div>`;
+  },
+  teasersub(s) {
+    return `<div class="abs sub" style="left:0;right:0;top:${s.top}px;text-align:center;font-size:${s.size || 40}px;letter-spacing:0.06em;color:#524d45" ${A("rise", 0.05, 0.5)}>${esc(s.text)}</div>`;
+  },
+  teaserfoot(s) {
+    return `<div class="abs" style="left:0;right:0;top:${s.top}px;display:flex;flex-direction:column;align-items:center">
+        <div class="ttl" style="font-size:60px"><h1>${esc(s.title)}</h1><div class="seal" style="font-size:0.23em;width:1.7em;height:1.7em;margin-top:0.75em">夏</div></div>
+        <div class="handle" style="font-size:28px;margin-top:14px;letter-spacing:0.14em">${esc(s.line)}</div>
+      </div>`;
+  },
+  // Hook pill for the 1:1 teaser, laid over the video.
+  hookpill(s) {
+    return `<div class="abs" style="left:0;right:0;top:${s.top}px;display:flex;justify-content:center" ${A("capin", 0, 0.5)}>
+      <div class="cap" style="position:relative;padding:18px 34px 20px"><div class="grain"></div>
+        <div class="txt" style="align-items:center"><div class="l" style="font-size:${s.size || 50}px;font-family:var(--title)">${esc(s.text)}</div>
+        ${s.sub ? `<div class="k" style="letter-spacing:0.14em;text-transform:none;font-style:italic;font-size:26px">${esc(s.sub)}</div>` : ""}</div></div></div>`;
+  },
+};
+
+function apply(el, kind, p, raw) {
+  const s = el.style;
+  switch (kind) {
+    case "fade": s.opacity = p; break;
+    case "rise": s.opacity = p; s.transform = `translateY(${(1 - p) * 16}px)`; break;
+    case "capin": s.opacity = clamp01(raw * 1.6); s.transform = `translateY(${(1 - p) * 26}px)`; break;
+    case "track": {
+      s.opacity = p;
+      s.transform = `translateY(${(1 - p) * 10}px)`;
+      const h = el.querySelector("h1");
+      if (h) h.style.letterSpacing = `${0.14 + 0.07 * (1 - p)}em`;
+      break;
+    }
+    case "stamp": s.opacity = clamp01(raw * 2) * 0.9; s.transform = `rotate(-4deg) scale(${1.45 - 0.45 * p})`; break;
+    case "grow": s.transform = `scaleX(${p})`; s.opacity = p; break;
+    case "wipe": s.clipPath = `inset(-20% ${(1 - p) * 100}% -20% 0)`; s.opacity = clamp01(raw * 3); break;
+    case "draw": el.setAttribute("stroke-dashoffset", String((1 - p) * Number(el.dataset.len))); el.setAttribute("opacity", raw > 0 ? 1 : 0); break;
+    case "pulse": {
+      const r0 = Number(el.getAttribute("data-r0") || el.getAttribute("r"));
+      el.setAttribute("data-r0", r0);
+      el.setAttribute("r", String(r0 * (1 + 0.35 * raw)));
+      el.setAttribute("opacity", String(raw > 0 && raw < 1 ? (1 - raw) * 0.9 : 0));
+      break;
+    }
+  }
+}
+
+window.render = (spec) => {
+  root.style.width = spec.w + "px";
+  root.style.height = spec.h + "px";
+  root.innerHTML = builders[spec.type](spec);
+  window.__els = [...root.querySelectorAll("[data-a]")].map((el) => {
+    const [kind, st, du] = el.dataset.a.split(" ");
+    return { el, kind, st: Number(st), du: Number(du) };
+  });
+  // Auto-fit: shrink any caption that would run off the frame.
+  return document.fonts.ready.then(() => {
+    const r = root.getBoundingClientRect();
+    for (const cap of root.querySelectorAll(".cap")) {
+      const b = cap.getBoundingClientRect();
+      if (b.right > r.right - 40) {
+        const l = cap.querySelector(".l");
+        const k = (r.right - 40 - b.left) / b.width;
+        l.style.fontSize = Math.floor(parseFloat(getComputedStyle(l).fontSize) * k * 0.98) + "px";
+      }
+    }
+    return true;
+  });
+};
+window.seek = (t) => {
+  for (const a of window.__els) {
+    const raw = a.du > 0 ? clamp01((t - a.st) / a.du) : t >= a.st ? 1 : 0;
+    apply(a.el, a.kind, a.kind === "stamp" ? easeOut(raw) : a.kind === "grow" ? easeInOut(raw) : easeOut(raw), raw);
+  }
+};
+window.bounds = () => [...root.querySelectorAll(".cap, .lbl, h1, .sub, .stats, .note, .pill")].map((e) => {
+  const b = e.getBoundingClientRect();
+  return { cls: e.className, l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top), b: Math.round(b.bottom) };
+});
+</script>
+</body>
+</html>

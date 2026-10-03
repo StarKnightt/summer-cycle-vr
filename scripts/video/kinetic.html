@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Summer Cycle v2 motion graphics</title>
+<!-- Animated cards and overlays for FINAL-v2: render(spec) builds the frame, seek(t) poses it at
+     t seconds. Everything is a pure function of t so frames can be rendered in any order. -->
+<style>
+  :root {
+    --paper: #f4ecd8; --ink: #2f3944; --muted: #6d675d; --muted-2: #8a8274; --accent: #d98a4e;
+    --warm: #a8501f; --seal: #b9463c; --cream: #fff8ec;
+    --serif: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --mincho: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "MS PMincho", "MS Mincho", serif;
+  }
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  #root { position: relative; overflow: hidden; font-family: var(--serif); color: var(--ink);
+    -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  .abs { position: absolute; }
+  .full { position: absolute; inset: 0; }
+  .grain { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.28 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.018' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.47 0 0 0 0 0.33 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='900' height='900' filter='url(%23f)'/%3E%3C/svg%3E"); }
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .word { display: inline-block; white-space: pre; will-change: transform, opacity, filter; }
+  .seal { border-radius: 0.16em; background: var(--seal); color: #f7ecd9; display: grid; place-items: center;
+    box-shadow: inset 0 0 0 0.06em rgba(247, 236, 217, 0.55); font-family: var(--mincho); }
+  .kick { text-transform: uppercase; color: var(--muted-2); white-space: nowrap; letter-spacing: 0.42em; text-indent: 0.42em; }
+  .rule { height: 1px; background: repeating-linear-gradient(90deg, rgba(120, 104, 80, 0.55) 0 9px, transparent 9px 17px); transform-origin: center; }
+  .num { font-variant-numeric: lining-nums tabular-nums; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const root = document.getElementById("root");
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+const outQuint = (x) => 1 - Math.pow(1 - x, 5);
+const inOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const outBack = (x, k = 1.4) => 1 + (k + 1) * Math.pow(x - 1, 3) + k * Math.pow(x - 1, 2);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const rand = (seed) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+// Every animated element registers a pose(t) function.
+let poses = [];
+const P = (fn) => { const id = `p${poses.length}`; poses.push({ id, fn }); return `data-p="${id}"`; };
+const byId = {};
+
+function sky(kind) {
+  const top = kind === "dusk"
+    ? "radial-gradient(120% 75% at 70% -10%, rgba(226, 150, 140, 0.5), rgba(230, 176, 150, 0.2) 45%, rgba(244, 236, 216, 0) 72%)"
+    : "radial-gradient(120% 70% at 50% -12%, rgba(150, 196, 196, 0.45), rgba(170, 205, 198, 0.16) 45%, rgba(244, 236, 216, 0) 70%)";
+  const sun = kind === "dusk"
+    ? `<div class="abs" style="left:1460px;top:640px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle, rgba(240,150,110,0.6), rgba(240,160,120,0.2) 48%, rgba(240,160,120,0) 70%)" ${P((t, e) => (e.style.transform = `translateY(${-t * 6}px)`))}></div>`
+    : `<div class="abs" style="left:1400px;top:120px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle, rgba(250,220,130,0.62), rgba(250,215,140,0.2) 48%, rgba(250,215,140,0) 70%)" ${P((t, e) => (e.style.transform = `translateY(${t * 5}px)`))}></div>`;
+  const hill = kind === "dusk" ? "rgba(120, 96, 110, 0.18)" : "rgba(130, 128, 110, 0.15)";
+  const hill2 = kind === "dusk" ? "rgba(120, 96, 110, 0.11)" : "rgba(120, 130, 110, 0.10)";
+  return `
+    <div class="full" style="background:var(--paper)"></div>
+    <div class="full" style="background:${top}"></div>
+    <div class="full" style="background:radial-gradient(140% 90% at 50% 45%, rgba(246,239,220,0) 55%, rgba(214,196,160,0.38) 100%)"></div>
+    ${sun}
+    <svg class="abs" style="left:-60px;bottom:0;filter:blur(1.5px)" width="2040" height="440" viewBox="0 0 2040 440" ${P((t, e) => (e.style.transform = `translateX(${-t * 7}px)`))}>
+      <path d="M0 260 C 220 180, 420 200, 640 240 S 1040 180, 1300 220 S 1720 170, 2040 230 L2040 440 L0 440Z" fill="${hill2}"/>
+    </svg>
+    <svg class="abs" style="left:-60px;bottom:0;filter:blur(1px)" width="2040" height="440" viewBox="0 0 2040 440" ${P((t, e) => (e.style.transform = `translateX(${-t * 14}px)`))}>
+      <path d="M0 320 C 260 270, 540 290, 790 320 S 1230 270, 1520 310 S 1850 290, 2040 305 L2040 440 L0 440Z" fill="${hill}"/>
+    </svg>
+    <div class="grain"></div>`;
+}
+
+/** A word-by-word reveal: each word rises out of a soft blur, staggered. */
+function words(text, start, { stagger = 0.07, dur = 0.7, rise = 26, blur = 10, cls = "" } = {}) {
+  return text.split(" ").map((w, i) => `<span class="word ${cls}" ${P((t, e) => {
+    const p = clamp((t - start - i * stagger) / dur);
+    const q = outCubic(p);
+    e.style.opacity = clamp(p * 1.8);
+    e.style.transform = `translateY(${(1 - q) * rise}px)`;
+    e.style.filter = `blur(${(1 - q) * blur}px)`;
+  })}>${esc(w)}${i < text.split(" ").length - 1 ? " " : ""}</span>`).join("");
+}
+/** Letter-by-letter logo reveal with a little tracking settle. */
+function letters(text, start, { stagger = 0.05, dur = 0.9 } = {}) {
+  return [...text].map((c, i) => `<span class="word" ${P((t, e) => {
+    const p = clamp((t - start - i * stagger) / dur);
+    const q = outQuint(p);
+    e.style.opacity = clamp(p * 1.6);
+    e.style.transform = `translateY(${(1 - q) * 34}px) scale(${0.96 + 0.04 * q})`;
+    e.style.filter = `blur(${(1 - q) * 12}px)`;
+  })}>${c === " " ? "&nbsp;" : esc(c)}</span>`).join("");
+}
+const fadeRise = (start, dur = 0.8, rise = 16) => P((t, e) => {
+  const p = clamp((t - start) / dur), q = outCubic(p);
+  e.style.opacity = p; e.style.transform = `translateY(${(1 - q) * rise}px)`;
+});
+const stamp = (start) => P((t, e) => {
+  const p = clamp((t - start) / 0.38), q = outBack(p, 2.2);
+  e.style.opacity = clamp(p * 2.5) * 0.92; e.style.transform = `rotate(-4deg) scale(${1.6 - 0.6 * q})`;
+});
+const grow = (start, dur = 0.8) => P((t, e) => { const p = inOutCubic(clamp((t - start) / dur)); e.style.transform = `scaleX(${p})`; e.style.opacity = p; });
+/** Whole-card exit: everything drifts up and fades over the last `d` seconds. */
+const exitAll = (out, d = 0.5) => P((t, e) => {
+  if (out == null) return;
+  const p = clamp((t - out) / d), q = inOutCubic(p);
+  e.style.opacity = 1 - q; e.style.transform = `translateY(${-q * 18}px)`; e.style.filter = `blur(${q * 6}px)`;
+});
+
+function logo(s, start, size) {
+  return `<div style="display:flex;align-items:flex-start;gap:0.2em;font-size:${size}px">
+      <h1 style="margin:0;font-size:1em;font-weight:400;letter-spacing:0.14em;line-height:1.1;white-space:nowrap;opacity:0.94;text-shadow:0 0 1px rgba(47,57,68,0.3)">${letters(s, start)}</h1>
+      <div class="seal" style="font-size:0.23em;width:1.7em;height:1.7em;margin-top:0.75em" ${stamp(start + 0.05 * s.length + 0.35)}>夏</div>
+    </div>`;
+}
+
+function fireflies(n, seed) {
+  const r = rand(seed);
+  let h = "";
+  for (let i = 0; i < n; i++) {
+    const x = 120 + r() * 1680, y = 260 + r() * 560, ph = r() * 6.28, sp = 0.6 + r() * 0.8, sz = 5 + r() * 6, dx = 20 + r() * 40;
+    h += `<div class="abs" style="left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;border-radius:50%;background:#ffe9a8;box-shadow:0 0 ${sz * 3}px ${sz}px rgba(255,214,120,0.55)" ${P((t, e) => {
+      e.style.transform = `translate(${Math.sin(t * sp * 0.7 + ph) * dx}px, ${Math.cos(t * sp * 0.5 + ph) * 18 - t * 6}px)`;
+      e.style.opacity = clamp((t - 0.4) / 1.2) * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * sp * 2.4 + ph)));
+    })}></div>`;
+  }
+  return h;
+}
+
+const builders = {
+  // Opening title: logo letter reveal, stamp, rule, subtitle. Opaque.
+  title2(s) {
+    return `<div class="full" ${P((t, e) => (e.style.transform = `scale(${1.0 + t * 0.006})`))}>${sky(s.sky || "day")}</div>
+      <div class="center" ${exitAll(s.out)}>
+        ${logo(s.title, 0.25, 140)}
+        <div class="rule" style="width:130px;margin:36px 0 30px" ${grow(1.25)}></div>
+        <div style="font-size:36px;font-style:italic;letter-spacing:0.16em;color:var(--muted);white-space:nowrap">${words(s.sub, 1.45, { stagger: 0.06, rise: 12, blur: 6 })}</div>
+      </div>`;
+  },
+
+  // End card: dusk sky, fireflies, logo reveal, line, handle with a drawn underline.
+  end2(s) {
+    return `<div class="full" ${P((t, e) => (e.style.transform = `scale(${1.0 + t * 0.006})`))}>${sky("dusk")}</div>
+      ${fireflies(22, 7)}
+      <div class="center" style="margin-top:-40px">
+        ${logo(s.title, 0.3, 150)}
+        <div class="rule" style="width:130px;margin:38px 0 30px" ${grow(1.3)}></div>
+        <div style="font-size:38px;font-style:italic;letter-spacing:0.14em;color:var(--muted);white-space:nowrap">${words(s.sub, 1.5, { stagger: 0.09, rise: 12, blur: 6 })}</div>
+        <div style="position:relative;margin-top:46px;font-size:34px;letter-spacing:0.2em;color:var(--ink);opacity:0.85" ${fadeRise(2.3, 0.8)}>
+          ${esc(s.handle)}
+          <div class="abs" style="left:0;right:0.2em;bottom:-10px;height:2px;background:var(--accent);transform-origin:left" ${P((t, e) => (e.style.transform = `scaleX(${inOutCubic(clamp((t - 2.7) / 0.7))})`))}></div>
+        </div>
+      </div>`;
+  },
+
+  // Stats with counters: big numbers count from the old value to the new one, bars shrink to match.
+  counters(s) {
+    const fmt = (v, f) => (f === "M" ? (v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : Math.round(v / 1e3) + "k") : String(Math.round(v)));
+    const blocks = s.stats.map((st, i) => {
+      const t0 = 1.0 + i * 0.35, d = 1.7;
+      return `<div style="display:flex;flex-direction:column;align-items:center;width:600px" ${fadeRise(0.55 + i * 0.2, 0.7)}>
+          <div class="kick" style="font-size:20px">${esc(st.label)}</div>
+          <div style="display:flex;align-items:baseline;gap:22px;margin-top:18px">
+            <div class="num" style="position:relative;font-size:44px;color:var(--muted-2);font-style:italic">${fmt(st.from, st.fmt)}
+              <div class="abs" style="left:-4px;right:-4px;top:55%;height:2px;background:var(--seal);opacity:0.75;transform-origin:left" ${P((t, e) => (e.style.transform = `scaleX(${inOutCubic(clamp((t - t0 - d + 0.2) / 0.4))})`))}></div>
+            </div>
+            <div style="font-size:34px;color:var(--muted-2)">to</div>
+            <div class="num" style="font-size:120px;line-height:1;color:var(--ink);min-width:3.2ch;text-align:left" ${P((t, e) => {
+              const p = inOutCubic(clamp((t - t0) / d));
+              e.textContent = fmt(lerp(st.from, st.to, p), st.fmt);
+              e.style.color = p >= 1 ? "#2f3944" : "#4a4d52";
+            })}>${fmt(st.from, st.fmt)}</div>
+          </div>
+          <div style="position:relative;width:420px;height:8px;margin-top:26px;border-radius:4px;background:rgba(138,130,116,0.18)">
+            <div class="abs" style="left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,#d98a4e,#e6a96a)" ${P((t, e) => {
+              const p = inOutCubic(clamp((t - t0) / d));
+              e.style.width = `${lerp(100, (100 * st.to) / st.from, p)}%`;
+              e.style.opacity = clamp((t - 0.6) / 0.5);
+            })}></div>
+          </div>
+        </div>`;
+    }).join("");
+    const chips = s.chips.map((c, i) => `<div style="padding:12px 26px 14px;border-radius:999px;background:rgba(255,248,236,0.7);box-shadow:inset 0 0 0 1px rgba(138,130,116,0.35);font-size:28px;letter-spacing:0.04em;white-space:nowrap" ${fadeRise(3.0 + i * 0.25, 0.6)}>${c}</div>`).join("");
+    return `<div class="full" ${P((t, e) => (e.style.transform = `scale(${1.0 + t * 0.005})`))}>${sky("day")}</div>
+      <div class="center" style="justify-content:flex-start;padding-top:120px" ${exitAll(s.out)}>
+        <div class="kick" style="font-size:20px" ${fadeRise(0.05, 0.6, 8)}>${esc(s.kicker)}</div>
+        <div style="margin-top:16px;font-size:68px;font-style:italic;letter-spacing:0.05em;white-space:nowrap">${words(s.heading, 0.15, { stagger: 0.06 })}</div>
+        <div class="rule" style="width:96px;margin:30px 0 54px" ${grow(0.5)}></div>
+        <div style="display:flex;gap:80px">${blocks}</div>
+        <div style="display:flex;gap:22px;margin-top:58px">${chips}</div>
+        <div style="margin-top:34px;font-size:23px;font-style:italic;letter-spacing:0.06em;color:var(--muted-2);white-space:nowrap" ${fadeRise(3.6, 0.8, 6)}>${esc(s.note)}</div>
+      </div>`;
+  },
+
+  // Kinetic words over footage. lines: [{ text, at, size, italic, accent }]. tone "ink" sits the
+  // words on a soft washi veil; "light" uses cream words with a warm shadow (for dusk skies).
+  kinetic(s) {
+    const light = s.tone === "light";
+    const lines = s.lines.map((l) => `<div style="font-size:${l.size || 104}px;line-height:1.12;letter-spacing:0.02em;white-space:nowrap;${l.italic ? "font-style:italic;" : ""}color:${l.accent ? (light ? "#ffe2b8" : "var(--warm)") : light ? "#fff8ec" : "var(--ink)"}">${words(l.text, l.at, { stagger: l.stagger || 0.09, dur: 0.8, rise: 30, blur: 12 })}</div>`).join("");
+    const first = Math.min(...s.lines.map((l) => l.at));
+    const veil = light
+      ? ""
+      : `<div class="abs" style="left:50%;top:${s.y}px;width:${s.veilW || 1300}px;height:${s.veilH || 420}px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side, rgba(250,244,228,0.86), rgba(250,244,228,0.6) 55%, rgba(250,244,228,0) 100%)" ${P((t, e) => {
+          const p = clamp((t - first + 0.15) / 0.6), x = s.out != null ? clamp((t - s.out) / 0.55) : 0;
+          e.style.opacity = outCubic(p) * (1 - inOutCubic(x));
+        })}></div>`;
+    return `${veil}
+      <div class="abs" style="left:0;right:0;top:${s.y}px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;${light ? "text-shadow:0 2px 24px rgba(70,30,20,0.55),0 1px 3px rgba(70,30,20,0.5);" : ""}" >
+        <div ${exitAll(s.out, 0.55)} style="display:flex;flex-direction:column;align-items:center">${lines}</div>
+      </div>`;
+  },
+
+  // Transitions over a cut, centred on t = dur/2. "dip": a warm white wash. "leak": drifting
+  // golden light blooms that peak over the cut.
+  leak(s) {
+    const d = s.dur, m = d / 2;
+    const bell = (t, w) => Math.exp(-Math.pow((t - m) / w, 2));
+    if (s.kind === "dip") {
+      return `<div class="full" style="background:radial-gradient(120% 120% at 50% 45%, #fff9ee, #f8ecd6)" ${P((t, e) => {
+        const a = t < m ? inOutCubic(clamp(t / m)) : 1 - inOutCubic(clamp((t - m - 0.03) / (d - m - 0.03)));
+        e.style.opacity = a;
+      })}></div>`;
+    }
+    const blob = (x0, x1, y, r, col, w, a) => `<div class="abs" style="left:0;top:0;width:${r * 2}px;height:${r * 2}px;border-radius:50%;background:radial-gradient(circle, ${col}, rgba(255,200,140,0) 70%)" ${P((t, e) => {
+      e.style.transform = `translate(${lerp(x0, x1, t / d) - r}px, ${y - r}px)`;
+      e.style.opacity = a * bell(t, w);
+    })}></div>`;
+    return `${blob(-300, 1500, 380, 900, "rgba(255,196,120,0.95)", d * 0.32, 1)}
+      ${blob(2200, 700, 760, 760, "rgba(255,170,130,0.9)", d * 0.28, 0.9)}
+      ${blob(400, 1300, 200, 600, "rgba(255,240,210,1)", d * 0.24, 0.9)}
+      <div class="full" style="background:radial-gradient(110% 110% at 45% 40%, rgba(255,246,228,1), rgba(255,226,180,0.9))" ${P((t, e) => (e.style.opacity = 0.92 * bell(t, d * 0.13)))}></div>`;
+  },
+};
+
+window.render = (spec) => {
+  poses = [];
+  root.style.width = spec.w + "px";
+  root.style.height = spec.h + "px";
+  root.innerHTML = builders[spec.type](spec);
+  for (const k of Object.keys(byId)) delete byId[k];
+  for (const el of root.querySelectorAll("[data-p]")) byId[el.dataset.p] = el;
+  return document.fonts.ready.then(() => true);
+};
+window.seek = (t) => { for (const p of poses) if (byId[p.id]) p.fn(t, byId[p.id]); };
+window.bounds = () => [...root.querySelectorAll("h1, .kick, .word")].slice(0, 60).map((e) => {
+  const b = e.getBoundingClientRect();
+  return { cls: e.className, l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top), b: Math.round(b.bottom) };
+});
+</script>
+</body>
+</html>
