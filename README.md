@@ -1,8 +1,42 @@
-# Summer Cycle
+# Summer Cycle VR
+
+A seated, hands-first WebXR bike ride for Meta Quest Browser. Sit back, rest your hands on the
+handlebars and ride a painted summer country road into dusk.
+
+**Play it: https://starknightt.github.io/summer-cycle-vr/**
+
+### On Meta Quest
+
+1. Open **Quest Browser** on the headset and go to
+   `https://starknightt.github.io/summer-cycle-vr/`.
+2. Wait for the paper loader to finish, then press **Enter VR**. Allow hand tracking if asked.
+3. Sit down and put the controllers away: it is played with your hands. Controllers work too.
+
+### How to play with your hands
+
+- **Hold the bars** and she rides: a hand near a grip holds it. Let go and the bike coasts to a stop.
+- **Steer** by turning the bars, with one hand or both.
+- **Pinch to brake** (thumb and index finger); it is analog, so a light pinch slows you a little.
+- **Ring the bell** with your left thumb.
+- **Pull the sun down**: reach up, pinch the small sun on the arc above you and drag it toward the
+  hills to move from afternoon to dusk.
+- **Wrist menu**: turn your left palm toward your face and poke the menu with your right index
+  finger (pause, comfort, pace, recenter, restart, leave VR). A pinch resumes.
+
+A guided ride of about four minutes teaches each of these once and ends at a small shrine at dusk;
+after that you can ride on freely. On a desktop browser the original game runs as before (keyboard
+and mouse, controls below). No headset? Add [`?xremu=1`](https://starknightt.github.io/summer-cycle-vr/?xremu=1)
+to try the VR path in Meta's IWER emulator; it is only loaded with that parameter, so a real
+headset always uses the browser's native WebXR.
+
+This is an adaptation of the desktop game **Summer Cycle**
+([StarKnightt/summer-cycle](https://github.com/StarKnightt/summer-cycle)); what changed for VR is
+listed in [CHANGELOG.md](CHANGELOG.md). MIT licensed, see [LICENSE](LICENSE).
+
+## The original game
 
 A bicycle ride down a Japanese country road on a late-summer afternoon, drawn like a hand-painted
-animation background and built in Three.js. It also runs in VR on Meta Quest, seated, with your
-hands on the handlebars (see [CHANGELOG.md](CHANGELOG.md)). There is no score and nothing
+animation background and built in Three.js. There is no score and nothing
 to win; you ride past flooded paddies, a row of old wooden shops and power lines sagging over the
 road, and the sun goes down if you let it. Everything on screen and everything you hear is
 generated in code at load time: the meshes, the leaf atlas the trees are painted with, the
@@ -14,11 +48,9 @@ The repository ships no image, model or audio files.
 *Captured from the running build with `tools/reel.mjs`, one simulated frame at a time. Nothing in
 it is composited or edited.*
 
-**Ride it: https://starknightt.github.io/summer-cycle/**
-
-For a hands-off recording: [`?autoplay=1`](https://starknightt.github.io/summer-cycle/?autoplay=1)
+For a hands-off recording: [`?autoplay=1`](https://starknightt.github.io/summer-cycle-vr/?autoplay=1)
 rides by itself with no UI, and
-[`?autoplay=1&timelapse=1`](https://starknightt.github.io/summer-cycle/?autoplay=1&timelapse=1)
+[`?autoplay=1&timelapse=1`](https://starknightt.github.io/summer-cycle-vr/?autoplay=1&timelapse=1)
 sets the sun from afternoon to dusk over 40 seconds.
 
 **The brief it was built from: [PROMPT.md](PROMPT.md).**
@@ -28,8 +60,8 @@ It wants a desktop GPU and a Chromium-based browser. It was built and measured o
 ## Running it locally
 
 ```
-git clone https://github.com/StarKnightt/summer-cycle.git
-cd summer-cycle
+git clone https://github.com/StarKnightt/summer-cycle-vr.git
+cd summer-cycle-vr
 pnpm install
 pnpm dev        # http://localhost:5421
 pnpm build      # type-check, then a production build into dist/
@@ -37,7 +69,7 @@ pnpm preview    # serve dist/ on http://localhost:5420
 ```
 
 The only runtime dependency is `three`. The build uses a relative base, so `dist/` works from any
-sub-path; every push to `master` deploys it to GitHub Pages through
+sub-path; every push to `main` deploys it to GitHub Pages through
 `.github/workflows/pages.yml`.
 
 The Playwright scripts need a running build (`pnpm preview`): `scripts/explore.mjs` checks on-foot

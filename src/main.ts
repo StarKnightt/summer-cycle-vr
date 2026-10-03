@@ -27,8 +27,9 @@ import { mergeSiblings } from "./xr/merge";
 import { ID } from "./world/geo";
 
 const params = new URLSearchParams(location.search);
-// Dev only: Meta's IWER emulates a Quest 3 (with hands) in a desktop browser.
-if (import.meta.env.DEV && params.has("xremu")) await (await import("./xr/emulator")).installEmulator(params.get("xremu"));
+// Opt-in via ?xremu only: Meta's IWER emulates a Quest 3 (with hands) in a desktop browser. Without the
+// parameter it is never loaded, so a real headset always gets the browser's native WebXR.
+if (params.has("xremu")) await (await import("./xr/emulator")).installEmulator(params.get("xremu"));
 // Before any shader compiles: scene shaders gain the headset output path (off on the desktop).
 installXrOutput();
 const AUTOPLAY = params.has("autoplay") && params.get("autoplay") !== "0";

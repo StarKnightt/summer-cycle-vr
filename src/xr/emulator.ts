@@ -1,5 +1,5 @@
 /**
- * Development only (`pnpm dev`, `?xremu=1`): Meta's IWER runtime stands in for a Quest 3 so the
+ * Opt-in only (`?xremu=1`, lazy-loaded): Meta's IWER runtime stands in for a Quest 3 so the
  * headset path runs in a desktop browser, with simulated hands (`?xremu=hands`, the default) or
  * controllers (`?xremu=pads`). `&devui=1` adds the IWER DevUI panel. The device is exposed as
  * `window.__xrdev` for scripted captures (scripts/xr-shots.mjs).
