@@ -26,7 +26,8 @@ during the competition window, from 27 September 2026, on the `webxr-hands` bran
 - Fixed: the headset scenery proxies only refilled while detail was easing (a `NaN` distance
   check), so a stationary start could show no grass or trees until the bike moved.
 - The audio settings key no longer carries the old project name (`summer-cycle:audio`; the old
-  key is moved over once and removed).
+  key is copied over once and left in place, since the desktop game on the same origin still
+  uses it).
 
 ## 2026-09-27: Summer Cycle VR, phase 2 (Quest performance)
 

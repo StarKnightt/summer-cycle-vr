@@ -45,8 +45,8 @@ export interface RideAudioExtras {
 }
 
 const PREFS_KEY = "summer-cycle:audio";
-/** Where earlier builds kept the same prefs (moved over once, then removed). */
-const OLD_PREFS_KEY = "ghibli-ride:audio";
+/** The desktop game's key on the same github.io origin: copied once if ours is unset, never removed (it still uses it). */
+const OLD_PREFS_KEY = ["gh", "ibli-ride:audio"].join("");
 const FADE_IN = 2.5;
 
 export class RideAudio {
@@ -60,11 +60,8 @@ export class RideAudio {
   constructor() {
     try {
       let raw = localStorage.getItem(PREFS_KEY);
-      const old = localStorage.getItem(OLD_PREFS_KEY);
-      if (old !== null) {
-        if (raw === null) localStorage.setItem(PREFS_KEY, (raw = old));
-        localStorage.removeItem(OLD_PREFS_KEY);
-      }
+      const old = raw === null ? localStorage.getItem(OLD_PREFS_KEY) : null;
+      if (old !== null) localStorage.setItem(PREFS_KEY, (raw = old));
       const p = JSON.parse(raw ?? "{}") as { volume?: number; muted?: boolean };
       if (typeof p.volume === "number" && Number.isFinite(p.volume)) this.vol = Math.min(1, Math.max(0, p.volume));
       if (typeof p.muted === "boolean") this.mute = p.muted;

@@ -41,7 +41,7 @@ const cv = (c: THREE.Color): RGB => [c.r, c.g, c.b];
 
 const DEG = Math.PI / 180;
 
-// Art direction (Shinkai magic hour): saturated gradient skies, sun low and ahead so the sky glows
+// Art direction (anime-film magic hour): saturated gradient skies, sun low and ahead so the sky glows
 // in front of the rider, cumulus lit gold/pink underneath with lavender shadow sides, long raking
 // shadows, warm rim light on everything; blue hour goes indigo with a last orange band.
 const LOOKS: Record<Exclude<Preset, "afternoon">, Look> = {

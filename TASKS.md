@@ -1,7 +1,7 @@
 # TASKS — Summer Cycle release
 
 ## Done means
-The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Vercel project is deleted, everything is merged on `master`, the final critic passes all checkpoints against `refs/` with close-up detail crops, a code-review pass finds no blocking issues, ≥90 fps (floor 75) is measured on an idle GPU, `scripts/explore.mjs` passes with zero console errors, no ports are left open, and only the `ghibli-ride` folder remains (no worktrees).
+The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Vercel project is deleted, everything is merged on `master`, the final critic passes all checkpoints against `refs/` with close-up detail crops, a code-review pass finds no blocking issues, ≥90 fps (floor 75) is measured on an idle GPU, `scripts/explore.mjs` passes with zero console errors, no ports are left open, and only the project folder remains (no worktrees).
 
 ## Merged
 - [x] Toon world, outlines, painterly post, sky/clouds, paddies with reflections, houses (iter 1–5)
@@ -51,5 +51,5 @@ The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Ver
 - [x] GitHub Pages prep: Actions workflow (pnpm build → deploy-pages), sub-path `/summer-cycle/` verified locally, README live URL
 - [ ] GitHub Pages: make repo public + enable Pages (source: GitHub Actions), re-run workflow, verify live URL
 - [x] Remove vercel.json / .vercelignore from the repo, delete local .vercel/ and .env.local
-- [ ] Delete Vercel project `ghibli-ride` (coordinator, at release)
+- [ ] Delete the old Vercel project (coordinator, at release)
 - [ ] Final cleanup: no worktrees, no ports, lean shots, README controls up to date

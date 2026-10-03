@@ -1,6 +1,6 @@
 # Summer Cycle — agent rules
 
-Studio Ghibli / Makoto Shinkai style third-person cycling game. Vite + TypeScript + Three.js, pnpm only.
+Third-person cycling game through a hand-painted, anime-style summer countryside. Vite + TypeScript + Three.js, pnpm only.
 
 ## Working rules
 - When a step doesn't need the user's input, keep going. Put status notes in the same message as the next action.
@@ -9,7 +9,7 @@ Studio Ghibli / Makoto Shinkai style third-person cycling game. Vite + TypeScrip
 - End every run with three headings: **Blocked on me**, **Changed**, **Found**. Mark anything you couldn't confirm and say where you looked.
 
 ## Project constraints
-- Everything stays inside `c:\Code\ghibli-ride`. Extra git worktrees go in `.worktrees/` (gitignored), never next to the project folder.
+- Everything stays inside the project folder. Extra git worktrees go in `.worktrees/` (gitignored), never next to the project folder.
 - Close every dev/preview server and headless browser you start. The user wants no ports left open. Never kill servers you didn't start (e.g. port 5411 is another project).
 - No recorded videos left on disk; keep screenshot sets lean.
 - Hosting: GitHub Pages (repo StarKnightt/summer-cycle, https://starknightt.github.io/summer-cycle/). Do not deploy to Vercel.

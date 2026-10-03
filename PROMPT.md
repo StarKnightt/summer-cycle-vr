@@ -1,19 +1,21 @@
 # The brief
 
-This is the brief Summer Cycle was built from, unedited. The list after it says where the game
-ended up going beyond it.
+*This is the original brief Summer Cycle was built from, lightly edited: references to specific
+studios, directors and films are replaced with neutral descriptions of the style.*
+
+The list after it says where the game ended up going beyond it.
 
 ---
 
-Ghibli-Style Cycling Game — Browser Build
+Anime-Style Cycling Game — Browser Build
 
 The Game
 
-Build a third-person cycling game in Three.js with a Studio Ghibli / Makoto Shinkai art style. A character rides a bicycle through a japanese countryside road. No combat, no score, no objectives — just ride and enjoy the scenery. This is a cinematic experience for a 30-40 second screen recording.
+Build a third-person cycling game in Three.js in a hand-painted, anime-film background art style. A character rides a bicycle through a japanese countryside road. No combat, no score, no objectives — just ride and enjoy the scenery. This is a cinematic experience for a 30-40 second screen recording.
 
 Art Direction — THIS IS THE MOST IMPORTANT SECTION
 
-The entire build lives or dies on matching this aesthetic. Reference: Studio Ghibli films (My Neighbor Totoro, Spirited Away countryside scenes), Makoto Shinkai films (Your Name, Weathering With You background art).
+The entire build lives or dies on matching this aesthetic. Reference: hand-painted backgrounds of classic Japanese animated films (gentle, pastoral countryside scenes) and the vivid, light-filled skies and backgrounds of modern anime films.
 
 Visual rules
 Painterly, not photorealistic — colors should look like watercolor/gouache paintings
@@ -22,7 +24,7 @@ Bold dark outlines on geometry edges (2-3px)
 Warm golden afternoon light — everything bathed in late-summer glow
 Soft color palette: warm greens, muted yellows, sky blues, earthy browns
 NO harsh shadows — soft, diffused lighting everywhere
-Clouds must be fluffy, volumetric-looking, Ghibli-style cumulus — not flat planes
+Clouds must be fluffy, volumetric-looking, hand-painted cumulus — not flat planes
 Sky gradient: deep blue at top → warm white/light blue at horizon
 Atmosphere/haze near the horizon — distance fog with warm tint
 
@@ -35,13 +37,13 @@ Sky shader with gradient + procedural cloud shapes
 Environment — Japanese Countryside Road
 The road: Narrow asphalt road with no lane markings — rural japanese country road. Slight curves winding through the landscape. Road edges blend into grass/dirt naturally — no harsh curbs. Subtle cracks and wear on the asphalt (toon-shaded, not photorealistic)
 Rice fields (left side of road): Flooded rice paddies with bright green rice shoots. Water reflections of the sky visible between the plants. Wooden/bamboo fences separating paddies. Extends into the distance with slight elevation changes
-Traditional buildings (right side, scattered): 2-3 traditional japanese wooden houses with dark tile roofs. Wooden walls, paper screens, small balconies. One small shop/cafe with a hanging fabric sign (noren). An AC unit on one wall (the classic Ghibli detail). Warm light glowing from inside windows
+Traditional buildings (right side, scattered): 2-3 traditional japanese wooden houses with dark tile roofs. Wooden walls, paper screens, small balconies. One small shop/cafe with a hanging fabric sign (noren). An AC unit on one wall (a classic anime background detail). Warm light glowing from inside windows
 Vegetation: Lush green trees — rounded canopy shapes, not individual leaves. Use clusters of overlapping sphere-like shapes for tree canopies, painted green. Tall grass along the roadside swaying gently. Wildflowers — small colored dots scattered in grass patches. Vines and climbing plants on fences and walls
 Infrastructure: Wooden power poles with sagging power lines crossing the road. A wooden fence/guardrail along parts of the road. Road signs (yellow diamond warning signs). One red post box (iconic japanese mailbox)
-Sky: Gradient: deep cerulean at zenith → warm white at horizon. Large fluffy cumulus clouds — Ghibli-style, not realistic. Subtle yellow butterflies floating near flowers (particle system). Warm sun from behind/above — god rays optional
+Sky: Gradient: deep cerulean at zenith → warm white at horizon. Large fluffy cumulus clouds — painterly, not realistic. Subtle yellow butterflies floating near flowers (particle system). Warm sun from behind/above — god rays optional
 
 The Character + Bicycle
-Character: Low-poly anime-style figure sitting on a bicycle. Simple body: head (sphere with flat face), torso (box), arms and legs (cylinders). School uniform or casual clothes — flat colored with toon shader. Hair: simple mesh shape, dark color, slight movement. NOT detailed — think Ghibli background characters, not protagonists. Cel-shaded with the same outline pass as everything else
+Character: Low-poly anime-style figure sitting on a bicycle. Simple body: head (sphere with flat face), torso (box), arms and legs (cylinders). School uniform or casual clothes — flat colored with toon shader. Hair: simple mesh shape, dark color, slight movement. NOT detailed — think anime background characters, not protagonists. Cel-shaded with the same outline pass as everything else
 Bicycle: Simple frame geometry — two wheels (torus), frame (cylinders), handlebars, seat. Red or blue frame color. Wheels rotate with forward movement. Pedals rotate — legs move in sync (simple IK or keyframe animation)
 Animation: Pedaling: legs cycle up and down on the pedals. Slight body lean into turns. Hair/clothes sway slightly with movement. Handlebar turns with steering input
 
@@ -57,7 +59,7 @@ Render / Output: 1920x1080. 60fps. Post-processing: toon outline pass, subtle bl
 
 Do NOT: Make it photorealistic — this is painterly/toon. Use standard PBR materials — everything must use toon/cel shader. Download any assets — all geometry, textures, and audio generated in code. Add combat, enemies, objectives, or scoring. Add UI except a subtle speed indicator if needed. Make the character hyper-detailed — simple low-poly anime figure is the goal. Add night mode or weather changes — keep it one warm afternoon. Max out GPU — test on RTX 4060
 
-Gauntlet Loop: Builder agent builds the scene following this spec. Critic agent compares rendered frames against Studio Ghibli film stills and Makoto Shinkai background art. Run builder and critic sequentially, not in parallel.
+Gauntlet Loop: Builder agent builds the scene following this spec. Critic agent compares rendered frames against hand-painted anime film background stills. Run builder and critic sequentially, not in parallel.
 
 What to Cut if it Gets Too Complex: Butterflies; Rice field water reflections; Character leg animation; Power lines; Painterly texture overlay; Multiple buildings; Road curves. Never cut: toon/cel shader, outlines, clouds, the character on a bicycle, trees, the sky gradient, third-person camera.
 
