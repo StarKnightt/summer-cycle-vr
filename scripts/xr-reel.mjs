@@ -610,10 +610,11 @@ async function ride() {
     R.pitch.go(14, 3.5, R.T);
     R.yaw.go(8, 3.5, R.T);
     await frames(page, R, 4.0);
-    // Back to the card over the basket.
-    R.pitch.go(-12, 3.2, R.T);
+    // Back to the card over the basket (the end card by now: what she rode, Ride again, Ride on).
+    R.pitch.go(-14, 3.2, R.T);
     R.yaw.go(0, 3.2, R.T);
     await frames(page, R, 4.2);
+    await still("13-end-card");
   });
   const sEnd = await state(page);
   console.log("states", JSON.stringify({ sBell: sBell.step, sSun: [sSun.step, sSun.sun], sMenu: sMenu.paused, sComfort, end: [sEnd.step, sEnd.speed] }));
