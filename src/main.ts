@@ -309,7 +309,10 @@ const xr = new XRMode({
     if (pause.paused) pause.resume(false);
     if (document.pointerLockElement === canvasEl) document.exitPointerLock();
     lookHint.style.opacity = "0";
-    renderer.setAnimationLoop(frame);
+    // The session's frame loop only: renderer.setAnimationLoop would also restart three's window
+    // loop (it stops that one on 'sessionstart', which has already fired), and every frame would
+    // run twice with interleaved timestamps.
+    renderer.xr.setAnimationLoop(frame);
   },
   onEnd: () => {
     renderer.setAnimationLoop(null);
@@ -383,6 +386,7 @@ function frame(now: number) {
   let dt = interval / 1000;
   last = now;
   if (dt > 0.1) dt = 0.1;
+  else if (!(dt >= 0)) dt = 0;
   if (inXR) dt = xr.preSim(dt, t);
   if (warm < WARM_FRAMES) {
     warm++;
