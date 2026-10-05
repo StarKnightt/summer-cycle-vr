@@ -22,11 +22,18 @@
         ],
         "fps": 0,
         "calls": 0,
-        "shadowCalls": 0,
+        "shadowCalls": 55,
         "level": "L0",
         "levelFps": 0,
-        "target": 72
-      }
+        "target": 72,
+        "hint": "hold",
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 7
+      },
+      "added": false
     },
     {
       "name": "guide opens on 'hold'",
@@ -48,13 +55,29 @@
           true,
           true
         ],
-        "fps": 346.2686567164178,
-        "calls": 307,
+        "fps": 180.73485600794453,
+        "calls": 254,
         "shadowCalls": 0,
         "level": "L0",
         "levelFps": 0,
-        "target": 72
-      }
+        "target": 72,
+        "hint": "hold",
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 458
+      },
+      "added": false
+    },
+    {
+      "name": "ghost hands show how to hold the bars",
+      "pass": true,
+      "detail": {
+        "visible": true,
+        "hint": "hold"
+      },
+      "added": true
     },
     {
       "name": "both hands hold the grips",
@@ -62,12 +85,12 @@
       "detail": {
         "presenting": true,
         "step": "brake",
-        "dist": 3,
+        "dist": 2,
         "held": [
           true,
           true
         ],
-        "steer": -0.004847114635054122,
+        "steer": 1.768835428524541e-10,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -76,13 +99,20 @@
           true,
           true
         ],
-        "fps": 348.72201307630314,
-        "calls": 309,
-        "shadowCalls": 0,
+        "fps": 200.00000000000003,
+        "calls": 256,
+        "shadowCalls": 55,
         "level": "L0",
-        "levelFps": 100,
-        "target": 72
-      }
+        "levelFps": 200,
+        "target": 72,
+        "hint": "brake",
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 1115
+      },
+      "added": false
     },
     {
       "name": "holding the bars rides (gentle ramp)",
@@ -95,7 +125,7 @@
           true,
           true
         ],
-        "steer": -0.004847114698591026,
+        "steer": 1.1976614947114074e-10,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -104,30 +134,49 @@
           true,
           true
         ],
-        "fps": 380.49940546995987,
-        "calls": 297,
-        "shadowCalls": 0,
+        "fps": 199.96040387688046,
+        "calls": 250,
+        "shadowCalls": 53,
         "level": "L0",
-        "levelFps": 103,
+        "levelFps": 200,
         "target": 72,
-        "speed": 4.0988442763732715
-      }
+        "hint": "brake",
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 1923,
+        "speed": 4.079960136263292
+      },
+      "added": false
     },
     {
       "name": "turning the bars left steers left",
       "pass": true,
       "detail": {
-        "steer": 0.49120758080854154,
-        "yawRate": 0.1860170135776083
-      }
+        "steer": 0.5361235565295419,
+        "yawRate": 0.17507840440567976
+      },
+      "added": false
     },
     {
       "name": "pinch brakes",
       "pass": true,
       "detail": {
         "brake": 1,
-        "speed": 0.016200000001335865
-      }
+        "speed": 0,
+        "hint": "bell"
+      },
+      "added": false
+    },
+    {
+      "name": "the brake lesson's ghost pinch stops once she has braked",
+      "pass": true,
+      "detail": {
+        "before": "brake",
+        "after": "bell"
+      },
+      "added": true
     },
     {
       "name": "touching the bell rings it and advances the guide",
@@ -135,12 +184,12 @@
       "detail": {
         "presenting": true,
         "step": "sun",
-        "dist": 33,
+        "dist": 36,
         "held": [
           true,
           true
         ],
-        "steer": 0.40119190689724404,
+        "steer": 0.3807843991858287,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -149,41 +198,55 @@
           true,
           true
         ],
-        "fps": 334.1288782823659,
-        "calls": 289,
+        "fps": 200.03961180786,
+        "calls": 293,
         "shadowCalls": 0,
         "level": "L0",
-        "levelFps": 99,
-        "target": 72
-      }
+        "levelFps": 200,
+        "target": 72,
+        "hint": "sun",
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 3470
+      },
+      "added": false
     },
     {
       "name": "dragging the sun scrubs the time of day",
       "pass": true,
       "detail": {
         "presenting": true,
-        "step": "ride",
-        "dist": 61,
+        "step": "menu",
+        "dist": 63,
         "held": [
           true,
           false
         ],
-        "steer": 0.09492326025243494,
+        "steer": 5.5227062147204945e-8,
         "brake": 0,
         "paused": false,
         "menu": false,
-        "sun": 2.238655985148619,
+        "sun": 2.1874985834670753,
         "hands": [
           true,
           true
         ],
-        "fps": 384.99702321860815,
-        "calls": 289,
-        "shadowCalls": 0,
+        "fps": 199.88007195801666,
+        "calls": 238,
+        "shadowCalls": 57,
         "level": "L0",
-        "levelFps": 103,
-        "target": 72
-      }
+        "levelFps": 200,
+        "target": 72,
+        "hint": "palm",
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 5003
+      },
+      "added": false
     },
     {
       "name": "palm toward the face opens the wrist menu",
@@ -191,27 +254,43 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 83,
+        "dist": 85,
         "held": [
           false,
           true
         ],
-        "steer": -0.027511210808335424,
+        "steer": -5.523159241239201e-8,
         "brake": 0,
         "paused": false,
         "menu": true,
-        "sun": 2.2388065060643343,
+        "sun": 2.1874986571267874,
         "hands": [
           true,
           true
         ],
-        "fps": 386.9938160790597,
-        "calls": 300,
-        "shadowCalls": 0,
+        "fps": 199.920031986014,
+        "calls": 244,
+        "shadowCalls": 58,
         "level": "L0",
-        "levelFps": 108,
-        "target": 72
-      }
+        "levelFps": 200,
+        "target": 72,
+        "hint": null,
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 6063
+      },
+      "added": false
+    },
+    {
+      "name": "the menu lesson follows the sun and ends when the menu opens",
+      "pass": true,
+      "detail": {
+        "before": "menu",
+        "after": "ride"
+      },
+      "added": true
     },
     {
       "name": "poking Pause pauses (hands only)",
@@ -219,27 +298,34 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 89,
+        "dist": 91,
         "held": [
           false,
           false
         ],
-        "steer": -1.4992167586375905e-8,
+        "steer": -3.266565382234948e-13,
         "brake": 0,
         "paused": true,
         "menu": true,
-        "sun": 2.2388065060643343,
+        "sun": 2.1874986571267874,
         "hands": [
           true,
           true
         ],
-        "fps": 380.650277557213,
-        "calls": 298,
+        "fps": 200.00000000000009,
+        "calls": 240,
         "shadowCalls": 0,
         "level": "L0",
-        "levelFps": 92,
-        "target": 72
-      }
+        "levelFps": 200,
+        "target": 72,
+        "hint": null,
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 6548
+      },
+      "added": false
     },
     {
       "name": "a pinch resumes",
@@ -247,27 +333,34 @@
       "detail": {
         "presenting": true,
         "step": "ride",
-        "dist": 91,
+        "dist": 93,
         "held": [
           true,
           true
         ],
-        "steer": -0.0036635122169190724,
+        "steer": 1.4239993994610258e-7,
         "brake": 0,
         "paused": false,
         "menu": false,
-        "sun": 2.2388065060643343,
+        "sun": 2.1874986571267874,
         "hands": [
           true,
           true
         ],
-        "fps": 383.9232153572145,
-        "calls": 301,
-        "shadowCalls": 0,
+        "fps": 200.07923930387537,
+        "calls": 242,
+        "shadowCalls": 58,
         "level": "L0",
-        "levelFps": 92,
-        "target": 72
-      }
+        "levelFps": 200,
+        "target": 72,
+        "hint": null,
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 7319
+      },
+      "added": false
     },
     {
       "name": "system menu (visibility) pauses and stays paused until a pinch",
@@ -275,7 +368,82 @@
       "detail": {
         "blurred": true,
         "back": true
-      }
+      },
+      "added": false
+    },
+    {
+      "name": "hands lost mid-ride: a card at eye level, the bike coasts",
+      "pass": true,
+      "detail": {
+        "ride0": 1.8282659999960704,
+        "lost": {
+          "presenting": true,
+          "step": "ride",
+          "dist": 98,
+          "held": [
+            false,
+            false
+          ],
+          "steer": -6.7125949082688944e-18,
+          "brake": 0,
+          "paused": false,
+          "menu": false,
+          "sun": 2.1874986571267874,
+          "hands": [
+            false,
+            false
+          ],
+          "fps": 200.00000000000014,
+          "calls": 283,
+          "shadowCalls": 0,
+          "level": "L0",
+          "levelFps": 200,
+          "target": 72,
+          "hint": null,
+          "notice": "lost",
+          "end": false,
+          "fade": 0,
+          "ridesAgain": 0,
+          "drawn": 8552,
+          "speed": 0.6978359999918974
+        }
+      },
+      "added": true
+    },
+    {
+      "name": "hands found again: the card clears and they hold the bars",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "ride",
+        "dist": 102,
+        "held": [
+          true,
+          true
+        ],
+        "steer": -1.0169249728235557e-7,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 2.1874986571267874,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 200.00000000000003,
+        "calls": 238,
+        "shadowCalls": 0,
+        "level": "L0",
+        "levelFps": 200,
+        "target": 72,
+        "hint": null,
+        "notice": "",
+        "end": false,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 9074
+      },
+      "added": true
     },
     {
       "name": "arrival: stops at the torii and dusk comes",
@@ -288,7 +456,7 @@
           true,
           true
         ],
-        "steer": -0.0006585844333780626,
+        "steer": -1.0178710408578794e-7,
         "brake": 0,
         "paused": false,
         "menu": false,
@@ -297,27 +465,107 @@
           true,
           true
         ],
-        "fps": 399.9999999999997,
-        "calls": 282,
+        "fps": 200.35707201189098,
+        "calls": 284,
+        "shadowCalls": 54,
+        "level": "L0",
+        "levelFps": 199,
+        "target": 72,
+        "hint": null,
+        "notice": "",
+        "end": true,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 11245,
+        "speed": 0.016235999996066095
+      },
+      "added": false
+    },
+    {
+      "name": "the end card appears after the arrival",
+      "pass": true,
+      "detail": {
+        "presenting": true,
+        "step": "arrive",
+        "dist": 777,
+        "held": [
+          false,
+          false
+        ],
+        "steer": -2.3290259475070492e-17,
+        "brake": 0,
+        "paused": false,
+        "menu": false,
+        "sun": 3,
+        "hands": [
+          true,
+          true
+        ],
+        "fps": 199.96040388277933,
+        "calls": 280,
         "shadowCalls": 0,
         "level": "L0",
-        "levelFps": 159,
+        "levelFps": 200,
         "target": 72,
-        "speed": 0.012935999999754132
-      }
+        "hint": null,
+        "notice": "",
+        "end": true,
+        "fade": 0,
+        "ridesAgain": 0,
+        "drawn": 11552
+      },
+      "added": true
+    },
+    {
+      "name": "Ride again fades out and restarts the ride in the afternoon",
+      "pass": true,
+      "detail": {
+        "tag": true,
+        "before": 0,
+        "after": 1,
+        "step": "hold",
+        "sun": 0,
+        "end": false
+      },
+      "added": true
+    },
+    {
+      "name": "each lesson shows its ghost hint",
+      "pass": true,
+      "detail": {
+        "hold": "hold",
+        "brake": "brake",
+        "bell": "bell",
+        "sun": "sun",
+        "palm": "palm",
+        "end": null
+      },
+      "added": true
+    },
+    {
+      "name": "no shader compiles during the whole session (lessons, ghost hands, sunset glow, end card)",
+      "pass": true,
+      "detail": {
+        "beforeEnter": 90,
+        "afterEnter": 90,
+        "endOfSession": 90
+      },
+      "added": true
     },
     {
       "name": "leaving VR returns to the desktop ride",
       "pass": true,
       "detail": {
         "presenting": false,
-        "fps": 143.84177404860014
-      }
+        "fps": 143.33728746709136
+      },
+      "added": false
     }
   ],
   "programs": {
-    "beforeEnter": 79,
-    "afterEnter": 86
+    "beforeEnter": 90,
+    "afterEnter": 90,
+    "endOfSession": 90
   },
   "menuQuat": [
     0,
@@ -326,9 +574,10 @@
     0
   ],
   "perf": {
-    "fps": 399.92001599709835,
-    "calls": 284,
+    "fps": 200.07923930387543,
+    "calls": 311,
     "note": "desktop GPU running the emulator; not Quest numbers"
   },
-  "errors": []
+  "errors": [],
+  "level": "adaptive"
 }
