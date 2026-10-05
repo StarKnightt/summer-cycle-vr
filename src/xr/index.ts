@@ -106,6 +106,8 @@ export class XRMode {
   /** Draw calls of the last headset frame: sun shadow pass, and in total. */
   shadowCalls = 0;
   private frame = 0;
+  /** Headset frames drawn this page (cold start measurement). */
+  drawn = 0;
   private rideIn = { ride: false, steer: 0, brake: 0, cruise: 4.2, accel: 0.55, assist: 0.5 };
 
   constructor(private d: Deps) {
@@ -446,6 +448,7 @@ export class XRMode {
     // No MSAA on the layer (emulator): coverage alpha falls back to the ordered dither.
     G.uDither.value = renderer.getContextAttributes()?.antialias ? 0 : 1;
     renderer.render(scene, this.session.cam);
+    this.drawn++;
     G.uDither.value = 0;
     if (this.adaptive.slow > 0) {
       // Emulator test (?xrslow=ms): stand-in frame cost that shrinks with the scene's triangles.
@@ -479,6 +482,7 @@ export class XRMode {
       notice: this.noticeKind,
       end: this.endCard.shown,
       fade: this.fade.k,
+      drawn: this.drawn,
     };
   }
   skip(dist: number): void {

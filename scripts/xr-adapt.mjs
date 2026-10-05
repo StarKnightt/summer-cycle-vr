@@ -116,9 +116,10 @@ try {
   await page.screenshot({ path: path.join(OUT, "adapt-L0.jpg"), type: "jpeg", quality: 90 });
   const prog0 = a.programs;
 
-  // 2. Heavy frame cost: steps down, then settles.
+  // 2. Heavy frame cost: steps down, then settles. Each step takes at least 5.5 s (2.5 s window +
+  // 3 s settle), so three steps and 10 quiet seconds need about 32 s.
   await R((ms) => (window.__ride.xr.mode.adaptive.slow = ms), SLOW);
-  const b = await sample(22);
+  const b = await sample(32);
   const bLog = b.log.slice(a.log.length);
   const lastChange = timeline.filter((x) => x[0] > 8).reduce((acc, x, i, arr) => (i && x[1] !== arr[i - 1][1] ? x[0] : acc), 8);
   check("heavy cost steps down", b.level !== "L0", { level: b.level, fps: b.levelFps, log: bLog });

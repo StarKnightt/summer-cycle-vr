@@ -328,6 +328,8 @@ try {
 
   const perf = await R(() => window.__ride.xr.state);
   report.perf = { fps: perf.fps, calls: perf.calls, note: "desktop GPU running the emulator; not Quest numbers" };
+  report.programs.endOfSession = await R(() => window.__rideRenderer.info.programs.length);
+  check("no shader compiles during the whole session (lessons, ghost hands, sunset glow, end card)", report.programs.endOfSession === progBefore, report.programs, true);
   // Leave VR through the menu's last row.
   await R(() => window.__ride.xr.mode.session.exit());
   await wait(1500);
