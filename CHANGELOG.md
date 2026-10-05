@@ -52,8 +52,13 @@ during the competition window, from 27 September 2026, on the `webxr-hands` bran
   at 4.2 m/s and 72 Hz), and the sun, the wrist menu and the end card compared hands against a moved
   rig. What was read now rides along with the rig.
 - Nothing compiles in the session any more: the headset materials (prompts, ghost hands, the end
-  card, the glow) compile behind the loader. Shader programs: 90 before entering, 90 at the end of
-  the guided ride (previously 79, then 86 after entering).
+  card, the glow) compile while the loader waits for the click. Shader programs: 90 before
+  entering, 90 at the end of the guided ride (previously 79, then 86 after entering).
+- **Two copies of three.js shipped.** IWER's DevUI (dev only, `?devui=1`) asks for three r184, and
+  the bundle's chunk grouping put that copy into the core chunk every page loads, next to the game's
+  r186: a "Multiple instances of Three.js" warning on every load and about 500 KB of JavaScript no
+  one used. `resolve.dedupe` keeps one: the three chunks went from 1.16 MB to 0.66 MB.
+- The headset ink compiles into the Quest tier only, so the desktop game's shaders are as before.
 
 ### Measured (IWER emulator, Quest tier, desktop GPU)
 Per eye at the worst spot of ten along the guided ride (`scripts/xr-probe.mjs --route`):
@@ -69,10 +74,15 @@ Per eye at the worst spot of ten along the guided ride (`scripts/xr-probe.mjs --
   hints for every lesson, the menu lesson, hands lost and found mid-ride, the end card, Ride again,
   no compiles over the session) at every adaptive level pinned (`--level=0..3`), with no console
   errors. `scripts/xr-adapt.mjs` passes all 9 checks.
-- Cold start (`scripts/xr-coldstart.mjs`, fresh browser profile, median of 3): the loader is ready
-  at about 19 s on this machine before and after (runs vary 17 to 21 s; warm-up draws are 12 to 14 s
-  of it), the hard-edge pass adds about 60 ms to the world build, and Enter VR reaches the first
-  headset frame in 0.42 s (previously about 0.8 s, read from a coarser readout). Not Quest numbers.
+- Cold start (`scripts/xr-coldstart.mjs`, fresh browser profile each run, both builds served from
+  this machine): the loader is ready at a median 19.2 s, against 19.7 to 20.6 s for the previous
+  build (runs vary by about 2 s; the warm-up draws are 12 to 14 s of it), the page's scripts are in
+  after 0.2 s instead of 0.5 s, the hard-edge pass adds about 60 ms to the world build, and Enter VR
+  reaches the first headset frame in about 0.48 s instead of 0.8 s. Not Quest numbers. (The larger
+  Quest-tier shaders cost about 1 to 2 s of that warm-up in this emulator; dropping the second
+  three.js won it back.)
+- `scripts/xr-live.mjs` checks a deployed build: the desktop start, Enter VR into the first lesson,
+  both hands on the grips riding into the next, Leave VR, no console errors.
 
 ### Tooling
 - `scripts/xr-look.mjs`: the same headset views at each time of day for look comparisons.
