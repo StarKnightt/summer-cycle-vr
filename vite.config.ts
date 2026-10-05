@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   base: "./",
+  // One three.js: IWER's DevUI asks for r184, and its copy landed in the eagerly loaded core chunk.
+  resolve: { dedupe: ["three"] },
   server: { port: 5421, strictPort: true, open: false },
   preview: { port: 5420, strictPort: true, open: false },
   build: {
