@@ -139,5 +139,23 @@ export function flatMaterial(color: THREE.Color, opacity = 1): THREE.ShaderMater
   });
 }
 
+/** A small glowing ball (display-ready): brightest where it faces the eye, deeper toward the rim. */
+export function ballMaterial(color: THREE.Color): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    uniforms: { uColor: { value: color } },
+    vertexShader: /* glsl */ `
+      out vec3 vN; out vec3 vW;
+      void main(){ vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColor; in vec3 vN; in vec3 vW;
+      layout(location = 0) out vec4 o;
+      void main(){
+        float f = max(dot(normalize(vN), normalize(cameraPosition - vW)), 0.0);
+        o = vec4(min(uColor * (0.74 + 0.34 * f) + vec3(0.2) * pow(f, 6.0), vec3(1.0)), 1.0);
+      }`,
+  });
+}
+
 /** sRGB hex as the raw display value (these materials skip colour management). */
 export const disp = (hex: string) => new THREE.Color().setStyle(hex, THREE.NoColorSpace);

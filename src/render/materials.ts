@@ -852,6 +852,14 @@ export function skyMaterial(): THREE.ShaderMaterial {
       void main(){
         vec3 dir = normalize(vWPos - cameraPosition);
         vec3 col = skyColor(dir);
+        if (uXRLook > 0.5) {
+          // Headset (no paint filter or bloom over the sky): a lighter band of haze on the horizon
+          // and a faint watercolour wash, blotches a few percent apart, so the gradient reads painted.
+          float hz = exp(-max(dir.y, 0.0) * 16.0);
+          col = mix(col, col * 0.55 + uHaze * 0.5, hz * 0.32);
+          float wash = fbm2(dir.xz / (max(dir.y, 0.0) + 0.3) * 1.4 + 11.0);
+          col *= 1.0 + (wash - 0.5) * 0.1;
+        }
         // Thin cirrus wisps high up.
         float h = max(dir.y, 0.02);
         vec2 p = dir.xz / h * 0.6;

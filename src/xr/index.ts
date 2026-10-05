@@ -18,7 +18,7 @@ import { INK, Panel, text, washiCard } from "./ui";
 import { XR_TIER } from "./tier";
 import { Proxies } from "./proxies";
 import { Adaptive, levels } from "./adaptive";
-import { XR_LOOK } from "./look";
+import { SunGlow, XR_LOOK } from "./look";
 
 export { installXrOutput } from "./grade";
 export { XR_TIER, QUEST } from "./tier";
@@ -58,6 +58,7 @@ export class XRMode {
   readonly vignette = new Vignette();
   readonly fps = new FpsMeter();
   readonly guide = new Guide();
+  readonly glow = new SunGlow();
   readonly proxies: Proxies;
   readonly adaptive: Adaptive;
   private adaptiveOn = true;
@@ -138,7 +139,7 @@ export class XRMode {
     this.adaptiveOn = new URLSearchParams(location.search).get("xradapt") !== "0";
     const slow = Number(new URLSearchParams(location.search).get("xrslow"));
     if (Number.isFinite(slow) && slow > 0) this.adaptive.slow = slow;
-    scene.add(this.session.rig, this.worldGroup, this.proxies.group);
+    scene.add(this.session.rig, this.worldGroup, this.proxies.group, this.glow.mesh);
   }
 
   get presenting(): boolean {
@@ -154,7 +155,7 @@ export class XRMode {
     const { renderer, scene } = this.d;
     const prev = renderer.getRenderTarget();
     renderer.setRenderTarget(target);
-    for (const o of [this.session.rig, this.worldGroup, this.proxies.group]) renderer.compile(o, camera, scene);
+    for (const o of [this.session.rig, this.worldGroup, this.proxies.group, this.glow.mesh]) renderer.compile(o, camera, scene);
     renderer.setRenderTarget(prev);
   }
 
@@ -185,6 +186,7 @@ export class XRMode {
     d.world.setDetail(1, Infinity, 130);
     REFL.uReflOn.value = 1;
     G.uXRLook.value = 0;
+    this.glow.mesh.visible = false;
     d.input.xr = null;
     this.paused = false;
     d.audio.setPaused(false);
@@ -266,6 +268,7 @@ export class XRMode {
     this.vignette.update(dt || 1 / 72, Math.abs(ctl.yawRate), accel, this.comfort);
     this.pauseCard.opacity += ((this.paused ? 1 : 0) - this.pauseCard.opacity) * 0.2;
     this.menu.update(dt || 1 / 72, this.hands, this.head, this.bars.held[0]);
+    if (XR_LOOK) this.glow.update();
     if (this.paused) return;
     if (this.guide.step !== "hold") this.dist += Math.max(0, ctl.speed) * dt;
     this.sun.beckon = this.guide.step === "sun" && !this.sun.grabbed ? 1 : 0;
