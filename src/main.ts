@@ -575,6 +575,14 @@ window.__ride = {
     const at = (z: number) => rider.root.worldToLocal(xr.menu.rowWorld(i, z, new THREE.Vector3())).toArray();
     return { front: at(0.04), through: at(-0.006) };
   },
+  /** End card tags ("again" / "on"): bike-space points in front of and just through the tag. */
+  xrEndButton(which: "again" | "on") {
+    if (!xr.endCard.shown) return null;
+    const m = xr.endCard[which].mesh;
+    m.updateMatrixWorld(true);
+    const at = (z: number) => rider.root.worldToLocal(m.localToWorld(new THREE.Vector3(0, 0, z))).toArray();
+    return { front: at(0.04), through: at(-0.006) };
+  },
   get ctlYawRate() {
     return ctl.yawRate;
   },

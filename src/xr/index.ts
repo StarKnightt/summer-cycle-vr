@@ -19,12 +19,16 @@ import { XR_TIER } from "./tier";
 import { Proxies } from "./proxies";
 import { Adaptive, levels } from "./adaptive";
 import { SunGlow, XR_LOOK } from "./look";
+import { GhostHands, type Hint } from "./ghost";
+import { EndCard, Fade } from "./ending";
 
 export { installXrOutput } from "./grade";
 export { XR_TIER, QUEST } from "./tier";
 
 /** Where the guided ride starts (the desktop opening composition). */
 const START_Z = -54;
+/** Lessons whose start is worth a chime (the one before was just done). */
+const CHIME_ON = new Set(["brake", "sun", "menu", "ride"]);
 const PACES = [
   { name: "gentle", cruise: 4.2, accel: 0.55 },
   { name: "breezy", cruise: 6.0, accel: 0.8 },
@@ -59,6 +63,26 @@ export class XRMode {
   readonly fps = new FpsMeter();
   readonly guide = new Guide();
   readonly glow = new SunGlow();
+  readonly ghost = new GhostHands();
+  readonly endCard = new EndCard();
+  readonly fade = new Fade();
+  /** "Can't see your hands" card (both hands gone for a moment, or none yet). */
+  private notice: Panel;
+  private noticeKind: "" | "lost" | "none" = "";
+  private lostFor = [0, 0];
+  private noHandsT = 0;
+  private everHands = false;
+  private cueAt = -10;
+  /** Grip rings invite the hands back for a moment after they return. */
+  private inviteT = 0;
+  /** This ride: did the brake / the sun once (hints stop), time, bell rings (end card summary). */
+  private braked = false;
+  private sunTaken = false;
+  private rideT = 0;
+  private bells = 0;
+  /** Ride again: 1 = fading out, 2 = restarted, fading in. */
+  private again = 0;
+  private bellLocal = new THREE.Vector3();
   readonly proxies: Proxies;
   readonly adaptive: Adaptive;
   private adaptiveOn = true;
@@ -100,8 +124,20 @@ export class XRMode {
     this.bars = new Bars(d.rider, this.worldGroup);
     this.worldGroup.add(this.hands.group);
     this.sun = new SunDial(d.tod);
-    this.session.rig.add(this.sun.group, this.guide.group);
-    this.session.cam.add(this.vignette.mesh, this.fps.panel.mesh);
+    this.session.rig.add(this.sun.group, this.guide.group, this.ghost.group, this.endCard.group);
+    this.session.cam.add(this.vignette.mesh, this.fps.panel.mesh, this.fade.mesh);
+    this.notice = new Panel(0.4, 0.11, 1024, (g, w, h) => {
+      if (!this.noticeKind) return;
+      washiCard(g, w, h);
+      const [title, body] = this.noticeKind === "lost" ? ["Your hands are out of view", "Hold them up in front of you to ride on"] : ["Where are your hands?", "Hold them up in front of you. Controllers work too."];
+      text(g, title, w / 2, h * 0.36, 52, w * 0.86, INK, 400, 0.06);
+      text(g, body, w / 2, h * 0.7, 38, w * 0.88, "rgba(58, 42, 34, 0.82)");
+    });
+    // At eye height, in the middle of the view (the guide's card sits lower, over the basket).
+    this.notice.mesh.position.set(0, 1.43, -0.72);
+    this.notice.mesh.renderOrder = 15;
+    this.notice.opacity = 0;
+    this.session.rig.add(this.notice.mesh);
     this.fps.panel.mesh.visible = XR_TIER.showFps;
     this.menu = new WristMenu([
       { label: () => (this.paused ? "Resume" : "Pause"), act: () => this.setPaused(!this.paused) },
@@ -172,6 +208,11 @@ export class XRMode {
     this.shadowK = this.shadowEvery ? 1 : 0;
     REFL.uReflOn.value = 0;
     G.uXRLook.value = XR_LOOK ? 1 : 0;
+    this.lostFor = [0, 0];
+    this.noHandsT = 0;
+    this.everHands = false;
+    this.noticeKind = "";
+    this.notice.opacity = 0;
     if (!this.started) this.restart();
     this.started = true;
     this.setPaused(false);
@@ -187,6 +228,10 @@ export class XRMode {
     REFL.uReflOn.value = 1;
     G.uXRLook.value = 0;
     this.glow.mesh.visible = false;
+    this.fade.k = this.fade.target = 0;
+    this.fade.update(0);
+    if (this.again === 1) this.restart();
+    this.again = 0;
     d.input.xr = null;
     this.paused = false;
     d.audio.setPaused(false);
@@ -200,7 +245,53 @@ export class XRMode {
     this.arriveT = -1;
     this.guide.reset();
     this.sun.moved = 0;
+    this.braked = this.sunTaken = false;
+    this.rideT = 0;
+    this.bells = 0;
+    this.endCard.hide();
     this.session.recenter();
+  }
+
+  /** What she rode, for the end card. */
+  private summary(): string {
+    const m = Math.floor(this.rideT / 60), s = Math.round(this.rideT % 60);
+    const time = m ? `${m} min ${s} s` : `${s} s`;
+    const bells = this.bells === 0 ? "a quiet bell" : this.bells === 1 ? "one ring of the bell" : `${this.bells} rings of the bell`;
+    return `${(this.dist / 1000).toFixed(1)} km in ${time}, ${bells}`;
+  }
+
+  /**
+   * Hands found and lost. A soft cue when a hand comes back after a moment away, another (and a card
+   * at eye height) when neither hand nor controller has been seen for most of a second; the bike
+   * coasts meanwhile, and the grip rings invite the hands back once they return.
+   */
+  private watchHands(dt: number): void {
+    const L = this.hands.left, R = this.hands.right;
+    const seen = [L.tracked || !!L.pad, R.tracked || !!R.pad];
+    const now = performance.now() / 1000;
+    for (let i = 0; i < 2; i++) {
+      if (seen[i]) {
+        if (this.lostFor[i] > 0.8 && now - this.cueAt > 1) {
+          this.d.audio.trigger("found");
+          this.cueAt = now;
+          this.inviteT = 1.6;
+        }
+        this.lostFor[i] = 0;
+      } else this.lostFor[i] += dt;
+    }
+    this.everHands ||= seen[0] || seen[1];
+    this.noHandsT = seen[0] || seen[1] ? 0 : this.noHandsT + dt;
+    const kind = this.paused || this.again ? "" : this.everHands ? (this.noHandsT > 0.8 ? "lost" : "") : this.noHandsT > 2 ? "none" : "";
+    if (kind !== this.noticeKind) {
+      if (kind === "lost" && now - this.cueAt > 1) {
+        this.d.audio.trigger("lost");
+        this.cueAt = now;
+      }
+      this.noticeKind = kind;
+      // Keep the last drawing while it fades out.
+      if (kind) this.notice.redraw();
+    }
+    this.notice.opacity += ((kind ? 1 : 0) - this.notice.opacity) * Math.min(1, dt * 6);
   }
 
   setPaused(p: boolean): void {
@@ -221,6 +312,7 @@ export class XRMode {
     s.cam.getWorldPosition(this.head);
     this.worldGroup.updateMatrixWorld(true);
     this.hands.update();
+    this.watchHands(dt);
     if (this.paused) {
       // Keep knowing which hand holds a grip (the wrist menu only opens off the bars).
       this.bars.update(0, this.hands, this.head, t);
@@ -232,14 +324,17 @@ export class XRMode {
       this.d.input.xr = this.rideIn;
       return 0;
     }
-    this.bars.invite = this.guide.step === "hold" ? 1 : 0;
+    this.inviteT = Math.max(0, this.inviteT - dt);
+    this.bars.invite = this.guide.step === "hold" || this.inviteT > 0 ? 1 : 0;
     const w0 = this.bars.held[0], w1 = this.bars.held[1];
     this.bars.update(dt, this.hands, this.head, t);
     if ((this.bars.held[0] && !w0) || (this.bars.held[1] && !w1)) this.d.audio.bump(0.14);
     if (this.bars.rang) {
       this.d.rider.bike.ringBell();
       this.d.audio.ringBell();
+      this.bells++;
     }
+    if (this.guide.step === "brake" && this.bars.brake > 0.5) this.braked = true;
     const pace = PACES[this.comfort ? Math.min(this.pace, 0) : this.pace];
     const r = this.rideIn;
     r.ride = this.bars.held[0] || this.bars.held[1];
@@ -269,19 +364,63 @@ export class XRMode {
     this.pauseCard.opacity += ((this.paused ? 1 : 0) - this.pauseCard.opacity) * 0.2;
     this.menu.update(dt || 1 / 72, this.hands, this.head, this.bars.held[0]);
     if (XR_LOOK) this.glow.update();
+    this.fade.update(dt || 1 / 72);
     if (this.paused) return;
-    if (this.guide.step !== "hold") this.dist += Math.max(0, ctl.speed) * dt;
-    this.sun.beckon = this.guide.step === "sun" && !this.sun.grabbed ? 1 : 0;
+    const step = this.guide.step;
+    if (step !== "hold") this.dist += Math.max(0, ctl.speed) * dt;
+    if (step !== "arrive" && step !== "free") this.rideT += dt;
+    this.sun.beckon = step === "sun" && !this.sun.grabbed ? 1 : 0;
     const had = this.sun.grabbed;
     this.sun.update(dt, this.hands, this.head, t);
     if (this.sun.grabbed && !had) this.d.audio.trigger("furin");
-    this.guide.update(dt, { held: this.bars.heldFor, rang: this.bars.rang, sunPos: tod.pos, sunMoved: this.sun.moved, dist: this.dist, speed: ctl.speed });
+    if (this.sun.grabbed && step === "sun") this.sunTaken = true;
+    this.guide.update(dt, { held: this.bars.heldFor, rang: this.bars.rang, sunPos: tod.pos, sunMoved: this.sun.moved, menu: this.menu.shown, braked: this.braked, dist: this.dist, speed: ctl.speed });
+    // A soft chime as each lesson is done (the bell and the arrival bring their own sounds).
+    if (this.guide.step !== step && CHIME_ON.has(this.guide.step) && !this.bars.rang) audio.trigger("chime");
     if (this.guide.arrived && this.arriveT < 0) {
       this.arriveT = 0;
       if (tod.pos < 2.9) tod.set("dusk");
       audio.trigger("temple");
     }
     if (this.arriveT >= 0) this.arriveT += dt;
+    this.hints(dt);
+    this.ending(dt);
+  }
+
+  /** Ghost hands for the lesson at hand, until it has been done once. */
+  private hints(dt: number): void {
+    const s = this.guide.step;
+    const hint: Hint | null =
+      s === "hold" ? "hold" : s === "brake" && !this.braked ? "brake" : s === "bell" ? "bell" : s === "sun" && !this.sunTaken ? "sun" : s === "menu" && !this.menu.shown ? "palm" : null;
+    this.d.rider.bike.bellWorld(this.bellLocal);
+    this.session.rig.worldToLocal(this.bellLocal);
+    this.ghost.update(dt, this.again ? null : hint, this.bars.held, this.bellLocal, this.d.tod.pos);
+  }
+
+  /** The end card a few seconds after arriving, its two tags, and Ride again's fade. */
+  private ending(dt: number): void {
+    const { ctl, audio } = this.d;
+    if (this.guide.step === "arrive" && this.arriveT > 5 && !this.endCard.shown && !this.again) {
+      this.endCard.show(this.summary());
+      this.guide.hidden = true;
+      audio.trigger("end");
+    }
+    const pick = this.endCard.update(dt, this.hands) ?? (this.endCard.shown && this.arriveT > 7 && ctl.speed > 1.2 ? "on" : null);
+    if (pick === "again") {
+      this.endCard.hide();
+      this.again = 1;
+      this.fade.target = 1;
+      audio.trigger("furin");
+    } else if (pick === "on") {
+      this.endCard.hide();
+      this.guide.rideOn();
+      audio.trigger("chime");
+    }
+    if (this.again === 1 && this.fade.k >= 1) {
+      this.restart();
+      this.again = 2;
+      this.fade.target = 0;
+    } else if (this.again === 2 && this.fade.k <= 0) this.again = 0;
   }
 
   /** Stripped headset frame: sun shadow (optional), then the scene straight into the XR target. */
@@ -336,6 +475,10 @@ export class XRMode {
       level: this.adaptive.current.name,
       levelFps: Math.round(this.adaptive.fps),
       target: this.adaptive.target,
+      hint: this.ghost.showing,
+      notice: this.noticeKind,
+      end: this.endCard.shown,
+      fade: this.fade.k,
     };
   }
   skip(dist: number): void {

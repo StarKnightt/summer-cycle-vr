@@ -11,10 +11,10 @@ const JOINTS = [
   "pinky-finger-metacarpal", "pinky-finger-phalanx-proximal", "pinky-finger-phalanx-intermediate", "pinky-finger-phalanx-distal", "pinky-finger-tip",
 ] as const;
 type Joint = (typeof JOINTS)[number];
-const J = Object.fromEntries(JOINTS.map((n, i) => [n, i])) as Record<Joint, number>;
+export const J = Object.fromEntries(JOINTS.map((n, i) => [n, i])) as Record<Joint, number>;
 const FINGERS = ["index", "middle", "ring", "pinky"] as const;
 /** Capsules drawn between joints: thumb chain, palm rays, finger chains, knuckle line. */
-const BONES: [number, number][] = [
+export const BONES: [number, number][] = [
   [J.wrist, J["thumb-metacarpal"]], [J["thumb-metacarpal"], J["thumb-phalanx-proximal"]], [J["thumb-phalanx-proximal"], J["thumb-phalanx-distal"]], [J["thumb-phalanx-distal"], J["thumb-tip"]],
   ...FINGERS.flatMap((f): [number, number][] => [
     [J.wrist, J[`${f}-finger-phalanx-proximal`]],

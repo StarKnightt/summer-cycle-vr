@@ -4,17 +4,18 @@ import { INK, Panel, text, washiCard } from "./ui";
 /** Distance from the opening spot to the red torii on the second lap (m): about three minutes. */
 export const JOURNEY = 772;
 
-export type Step = "hold" | "brake" | "bell" | "sun" | "ride" | "near" | "arrive" | "free";
+export type Step = "hold" | "brake" | "bell" | "sun" | "menu" | "ride" | "near" | "arrive" | "free";
 
 const COPY: Record<Step, [string, string]> = {
   hold: ["Summer Cycle", "Rest both hands on the handlebars to ride"],
   brake: ["Easy does it", "Pinch thumb and finger to brake. Let go of the bars to coast."],
   bell: ["Say hello", "Tap the little bell by your left hand"],
   sun: ["Late summer light", "Reach up, pinch the sun and pull it down toward the hills"],
+  menu: ["Your menu", "Turn your left palm toward you, any time"],
   ride: ["Ride to the shrine", ""],
   near: ["Nearly there", "Slow down by the red torii"],
-  arrive: ["The end of summer", "The lanterns are coming on. Stay as long as you like."],
-  free: ["", ""],
+  arrive: ["The end of summer", "The lanterns are coming on."],
+  free: ["Ride on", "Hands on the bars whenever you like. Palm up for the menu."],
 };
 
 export interface GuideState {
@@ -22,6 +23,10 @@ export interface GuideState {
   rang: boolean;
   sunPos: number;
   sunMoved: number;
+  /** The wrist menu is open. */
+  menu: boolean;
+  /** Braked once during the brake lesson. */
+  braked: boolean;
   dist: number;
   speed: number;
 }
@@ -40,6 +45,8 @@ export class Guide {
   private shownK = 0;
   /** Set on the frame the ride arrives (the XR mode plays the ending). */
   arrived = false;
+  /** Another card has the stage (the end card): this one fades out. */
+  hidden = false;
 
   constructor() {
     this.panel = new Panel(0.6, 0.18, 1024, (g, w, h) => {
@@ -57,7 +64,14 @@ export class Guide {
 
   reset(): void {
     this.arrived = false;
+    this.hidden = false;
     this.set("hold");
+  }
+
+  /** After the end card: free riding, with a short reminder of the controls. */
+  rideOn(): void {
+    this.hidden = false;
+    this.set("free");
   }
 
   private set(s: Step): void {
@@ -82,13 +96,16 @@ export class Guide {
         if (g.held > 0.6) next("brake");
         break;
       case "brake":
-        if (this.t > 8) next("bell");
+        if ((g.braked && this.t > 2.5) || this.t > 10) next("bell");
         break;
       case "bell":
         if (g.rang || this.t > 30) next("sun");
         break;
       case "sun":
-        if ((g.sunPos >= 1.6 && g.sunMoved > 0.5) || this.t > 45) next("ride");
+        if ((g.sunPos >= 1.6 && g.sunMoved > 0.5) || this.t > 45) next("menu");
+        break;
+      case "menu":
+        if ((g.menu && this.t > 0.5) || this.t > 12) next("ride");
         break;
       case "ride":
         this.show(COPY.ride[0], `${Math.round(left / 10) * 10} m to go, on past the shops`);
@@ -100,15 +117,10 @@ export class Guide {
           next("arrive");
         }
         break;
-      case "arrive":
-        if (this.t > 14) {
-          this.show("Ride on", "Hands on the bars whenever you like. Palm up for the menu.");
-          if (this.t > 22) next("free");
-        }
-        break;
+      // "arrive" waits for the end card (index.ts); "free" just goes quiet after a while.
     }
     // Cards fade out while riding once read (the distance card stays short), fade back on change.
-    const quiet = (this.step === "ride" && this.t > 6 && left > 110) || this.step === "free";
+    const quiet = (this.step === "ride" && this.t > 6 && left > 110) || (this.step === "free" && this.t > 9) || this.hidden;
     this.shownK += ((quiet ? 0 : 1) - this.shownK) * Math.min(1, dt * 3);
     this.panel.opacity = this.shownK * Math.min(1, this.t * 2.5);
   }
