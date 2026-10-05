@@ -175,6 +175,22 @@ export class Hands {
     this.draw();
   }
 
+  /**
+   * Carry everything measured this frame by a rigid move `m` (world space) and redraw: the rig moves
+   * with the bike after the hands are read, and the hands must ride along, not trail a frame behind.
+   */
+  shift(m: THREE.Matrix4, q: THREE.Quaternion): void {
+    for (const h of [this.left, this.right]) {
+      if (!h.tracked && !h.pad) continue;
+      for (const j of h.joint) j.applyMatrix4(m);
+      h.palm.applyMatrix4(m);
+      h.pinchPoint.applyMatrix4(m);
+      h.palmNormal.applyQuaternion(q);
+      h.gripQ.premultiply(q);
+    }
+    this.draw();
+  }
+
   private draw(): void {
     let nb = 0, nr = 0;
     for (const h of [this.left, this.right]) {

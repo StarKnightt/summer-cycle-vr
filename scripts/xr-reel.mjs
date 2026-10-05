@@ -475,6 +475,8 @@ async function ride() {
     await frames(page, R, 5.0);
   });
   const sSun = await state(page);
+  // At 30 fps the bike moves 14 cm a frame: a hand read a frame behind the rig misses the sun.
+  if (!(sSun.sun > 1.5)) errors.push(`the sun drag did not take (time of day ${sSun.sun}, step ${sSun.step})`);
 
   // Wrist menu: palm up, poke Pause, resume with a pinch.
   const openMenu = async () => {

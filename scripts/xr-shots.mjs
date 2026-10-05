@@ -316,13 +316,12 @@ try {
     await aim("right", tag.through, "index", "point", 0);
     await wait(250);
   }
-  const fading = await R(() => window.__ride.xr.state.fade);
   await page.waitForFunction(() => {
     const s = window.__ride.xr.state;
-    return s.step === "hold" && s.fade < 0.05;
+    return s.ridesAgain > 0 && s.fade < 0.05;
   }, null, { timeout: 8000 }).catch(() => {});
   const sa = await R(() => window.__ride.xr.state);
-  check("Ride again fades out and restarts the ride in the afternoon", fading > 0 && sa.step === "hold" && sa.sun < 0.05 && !sa.end, { tag: !!tag, fading, step: sa.step, sun: sa.sun, end: sa.end }, true);
+  check("Ride again fades out and restarts the ride in the afternoon", se.ridesAgain === 0 && sa.ridesAgain === 1 && sa.step === "hold" && sa.sun < 0.05 && !sa.end, { tag: !!tag, before: se.ridesAgain, after: sa.ridesAgain, step: sa.step, sun: sa.sun, end: sa.end }, true);
   await shot("13b-ride-again");
   check("each lesson shows its ghost hint", hints.hold === "hold" && hints.brake === "brake" && hints.bell === "bell" && hints.sun === "sun" && hints.palm === "palm", hints, true);
 

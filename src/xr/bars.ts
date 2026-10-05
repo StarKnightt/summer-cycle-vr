@@ -49,6 +49,14 @@ export class Bars {
     }
   }
 
+  /** Carry the grip rings by the rig's move this frame (see Hands.shift). */
+  shift(m: THREE.Matrix4, q: THREE.Quaternion): void {
+    for (const r of this.rings) {
+      r.position.applyMatrix4(m);
+      r.quaternion.premultiply(q);
+    }
+  }
+
   update(dt: number, hands: Hands, head: THREE.Vector3, t: number): void {
     const steerG = this.rider.bike.steer;
     const root = this.rider.root;

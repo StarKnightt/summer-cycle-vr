@@ -82,6 +82,8 @@ export class XRMode {
   private bells = 0;
   /** Ride again: 1 = fading out, 2 = restarted, fading in. */
   private again = 0;
+  /** Rides restarted from the end card (test hook). */
+  private ridesAgain = 0;
   private bellLocal = new THREE.Vector3();
   readonly proxies: Proxies;
   readonly adaptive: Adaptive;
@@ -108,6 +110,10 @@ export class XRMode {
   private frame = 0;
   /** Headset frames drawn this page (cold start measurement). */
   drawn = 0;
+  /** The rig's world transform when the hands were read, and how far it has moved since. */
+  private rigWas = new THREE.Matrix4();
+  private moved = new THREE.Matrix4();
+  private movedQ = new THREE.Quaternion();
   private rideIn = { ride: false, steer: 0, brake: 0, cruise: 4.2, accel: 0.55, assist: 0.5 };
 
   constructor(private d: Deps) {
@@ -311,6 +317,7 @@ export class XRMode {
   preSim(dt: number, t: number): number {
     const s = this.session;
     s.rig.updateMatrixWorld(true);
+    this.rigWas.copy(s.rig.matrixWorld).invert();
     s.cam.getWorldPosition(this.head);
     this.worldGroup.updateMatrixWorld(true);
     this.hands.update();
@@ -360,6 +367,13 @@ export class XRMode {
     this.session.place(ctl.x, ctl.z, ctl.yaw);
     this.proxies.update(ctl.x, ctl.z, dt || 1 / 72);
     this.session.rig.updateMatrixWorld(true);
+    // The rig just moved with the bike (up to ~6 cm a frame): what preSim read in world space (hands,
+    // head, grip rings) moves with it, or the sun, the menu and the drawn hands trail a frame behind.
+    this.moved.multiplyMatrices(this.session.rig.matrixWorld, this.rigWas);
+    this.movedQ.setFromRotationMatrix(this.moved);
+    this.hands.shift(this.moved, this.movedQ);
+    this.bars.shift(this.moved, this.movedQ);
+    this.head.applyMatrix4(this.moved);
     const accel = dt > 0 ? Math.abs(ctl.speed - this.lastSpeed) / dt : 0;
     this.lastSpeed = ctl.speed;
     this.vignette.update(dt || 1 / 72, Math.abs(ctl.yawRate), accel, this.comfort);
@@ -420,6 +434,7 @@ export class XRMode {
     }
     if (this.again === 1 && this.fade.k >= 1) {
       this.restart();
+      this.ridesAgain++;
       this.again = 2;
       this.fade.target = 0;
     } else if (this.again === 2 && this.fade.k <= 0) this.again = 0;
@@ -482,6 +497,7 @@ export class XRMode {
       notice: this.noticeKind,
       end: this.endCard.shown,
       fade: this.fade.k,
+      ridesAgain: this.ridesAgain,
       drawn: this.drawn,
     };
   }
