@@ -23,8 +23,9 @@ handlebars and ride a painted summer country road into dusk.
 - **Wrist menu**: turn your left palm toward your face and poke the menu with your right index
   finger (pause, comfort, pace, recenter, restart, leave VR). A pinch resumes.
 
-A guided ride of about four minutes teaches each of these once and ends at a small shrine at dusk;
-after that you can ride on freely. On a desktop browser the original game runs as before (keyboard
+A guided ride of about four minutes teaches each of these once, with translucent ghost hands
+showing each gesture where you make it, and ends at a small shrine at dusk with a card of what you
+rode: poke **Ride again** to start over in the afternoon, or **Ride on** to keep riding freely. On a desktop browser the original game runs as before (keyboard
 and mouse, controls below). No headset? Add [`?xremu=1`](https://starknightt.github.io/summer-cycle-vr/?xremu=1)
 to try the VR path in Meta's IWER emulator; it is only loaded with that parameter, so a real
 headset always uses the browser's native WebXR.

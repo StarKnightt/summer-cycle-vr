@@ -35,8 +35,12 @@ The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Ver
 - [x] Adaptive headset quality (L0 to L3, no recompiles), verified in the emulator with `?xrslow` (`scripts/xr-adapt.mjs`)
 - [ ] Cold start: warm-up draws are ~10 s of ~15 s in the emulator (ANGLE/D3D11 first-use work); measure on Quest before restructuring
 - [ ] Multiview: only in three's WebGPURenderer (would need the materials ported to TSL)
-- [ ] Headset look: cheap ink (inverted hulls on houses / poles) and a sun glow to replace the lost post chain
+- [x] Headset look: ink without a post pass (contour lines + per-corner hard edges on houses, street furniture and fences), sun glow, sky wash, output dither (2026-10-06)
+- [x] Hands-only lessons with ghost hands, menu lesson, hands lost / found card and cues, end card with Ride again / Ride on (2026-10-06)
+- [x] Fix: every headset frame ran twice (window loop restarted by setAnimationLoop after sessionstart); fix: hands trailed the bike by one frame
+- [ ] On a real Quest: does Quest Browser fire window rAF during an immersive session? (if it did, the double frame loop was costing a second render per frame there too)
 - [ ] Demo video from the emulator (scripted hands), Devpost write-up
+- [ ] Re-capture the demo clips (`scripts/xr-reel.mjs`) and re-cut the video: the footage in media/xr-reel predates the new look, lessons and ending
 
 ## Remaining
 - [x] Merge `feature/mouse`
