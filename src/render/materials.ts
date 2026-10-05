@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { TOD, TOD_GLSL } from "./todUniforms";
+import { QUEST } from "../xr/tier";
 
 /**
  * Every visible surface uses one of the custom toon materials below. They all render into a
@@ -274,13 +275,15 @@ const UBER_VS = /* glsl */ `
 ${COMMON}
 in float aMat;
 in float aWind;
+#ifdef XR_INK
 in vec3 aEdge;
+out vec3 vEdge;
+#endif
 out vec3 vWPos;
 out vec3 vN;
 out vec3 vCol;
 out vec2 vUv;
 out vec3 vObj;
-out vec3 vEdge;
 flat out int vMat;
 
 vec3 windOffset(vec3 wp, float w){
@@ -349,7 +352,9 @@ void main(){
 #endif
   vUv = uv;
   vObj = position;
+#ifdef XR_INK
   vEdge = aEdge;
+#endif
   vMat = mt;
   gl_Position = projectionMatrix * viewMatrix * wp;
   if (mt == 21 && uNoFringe > 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
@@ -372,7 +377,9 @@ in vec3 vN;
 in vec3 vCol;
 in vec2 vUv;
 in vec3 vObj;
+#ifdef XR_INK
 in vec3 vEdge;
+#endif
 flat in int vMat;
 // Per-material extras (see uberWith): bike lamp glow, spoke motion blur.
 uniform float uLamp;
@@ -408,6 +415,8 @@ float aaKeep(float x){ return 1.0 - smoothstep(0.15, 0.45, fwidth(x)); }
 // - crease: faceted props carry their hard edges per corner (vEdge, see edges.ts).
 // Triangles only a few pixels across get no crease line (lattices would fill in). Weighted by the
 // outline mask and faded with distance like the desktop ink. Call in uniform control flow (fwidth).
+// Compiled only into Quest-tier variants that draw outlines (XR_INK, see uber()).
+#ifdef XR_INK
 vec3 xrInk(vec3 col, vec3 N, vec3 wpos, float mask){
   vec3 V = cameraPosition - wpos;
   float d = length(V);
@@ -420,6 +429,7 @@ vec3 xrInk(vec3 col, vec3 N, vec3 wpos, float mask){
   float e = max(contour, crease) * clamp(mask, 0.0, 1.0) * (1.0 - smoothstep(40.0, 320.0, d) * 0.8);
   return mix(col, mix(col * 0.22, vec3(0.011, 0.007, 0.009), 0.55), e * 0.9);
 }
+#endif
 
 void main(){
   vec3 N = normalize(vN);
@@ -710,7 +720,9 @@ void main(){
     }
     col = c;
   }
+#ifdef XR_INK
   if (uXRLook > 0.5) col = xrInk(col, N, vWPos, mask);
+#endif
   col = applyFog(col, vWPos);
   writeOut(col, N, mask);
 }
@@ -729,10 +741,19 @@ export function uberWith(id: number, mask: number, extra: Record<string, THREE.I
       uniforms: { ...G, uId: { value: id }, uMask: { value: mask }, ...extra },
       vertexShader: UBER_VS,
       fragmentShader: UBER_FS,
+      defines: inkDefines(mask),
       vertexColors: true,
       alphaToCoverage: true,
     }),
   );
+}
+
+/**
+ * Headset ink is compiled into the Quest tier only (the desktop inks in post). Not per outline mask:
+ * materials that differ only in their mask share one program, and splitting them costs more.
+ */
+function inkDefines(_mask: number): Record<string, string> {
+  return QUEST ? { XR_INK: "" } : {};
 }
 
 /** Geometry without `aEdge` (see edges.ts) must read zeros: attribute slots are shared between programs. */
@@ -755,7 +776,7 @@ export function uber(id: number, mask = 1, side: THREE.Side = THREE.FrontSide, m
         uniforms: { ...G, uId: { value: id }, uMask: { value: mask } },
         vertexShader: UBER_VS,
         fragmentShader: UBER_FS,
-        defines: mts ? { MT_MASK_V: `0x${(mts >>> 0).toString(16)}u` } : {},
+        defines: { ...inkDefines(mask), ...(mts ? { MT_MASK_V: `0x${(mts >>> 0).toString(16)}u` } : {}) },
         vertexColors: true,
         side,
         alphaToCoverage: true,

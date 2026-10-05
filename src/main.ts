@@ -320,7 +320,6 @@ const xr = new XRMode({
     requestAnimationFrame(frame);
   },
 });
-xr.precompile(post.mrt, chase.cam);
 xr.session.button.addEventListener("click", () => {
   // Before the ride starts the loader takes this click (and enters VR from its callback).
   if (started && !waiting) {
@@ -523,6 +522,8 @@ function frame(now: number) {
   if (warm === WARM_FRAMES && !started) {
     started = true;
     post.warmSmaa();
+    // After the warm-up (it would compete with its first draws), while the loader waits for a click.
+    xr.precompile(post.mrt, chase.cam);
     bootLog.push(["total", Math.round(performance.now() - bootT0)]);
     if (SKIP_INTRO) loader.remove();
     else {
