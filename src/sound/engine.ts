@@ -7,7 +7,19 @@ import { Steps, type StepSurface } from "./steps";
 
 export type LayerName = "bike" | "wind" | "cicadas" | "birds" | "water" | "ambience";
 export const LAYER_NAMES: LayerName[] = ["bike", "wind", "cicadas", "birds", "water", "ambience"];
-export type SoundEvent = "bell" | "bump" | "furin" | "temple" | "crossing" | "uguisu" | "kite" | "crow" | "frog" | "higurashi" | "minmin";
+export type SoundEvent = "bell" | "bump" | "furin" | "temple" | "crossing" | "uguisu" | "kite" | "crow" | "frog" | "higurashi" | "minmin" | Cue;
+/** Headset prompts: a step done, a hand found or lost, the end card. */
+export type Cue = "chime" | "found" | "lost" | "end";
+
+/** Cue phrases: [frequency (Hz), delay (s), gain]. Pentatonic, so any two overlap sweetly. */
+const CUES: Record<Cue, [number, number, number][]> = {
+  chime: [[880, 0, 0.05], [1318.5, 0.11, 0.045]],
+  found: [[784, 0, 0.03], [1174.7, 0.07, 0.03]],
+  lost: [[1174.7, 0, 0.026], [784, 0.09, 0.026]],
+  end: [[659.3, 0, 0.04], [784, 0.17, 0.038], [880, 0.34, 0.036], [1174.7, 0.51, 0.04]],
+};
+/** Partials of a struck glass rod: [ratio, level, decay (s)]. */
+const GLASS: [number, number, number][] = [[1, 1, 0.55], [2.76, 0.2, 0.22], [5.4, 0.06, 0.1]];
 
 /** Raw per-frame input; anything left undefined falls back to a sensible default. */
 export interface EngineInput {
@@ -225,6 +237,32 @@ export class SoundEngine {
         return;
       case "minmin":
         return this.cicadas.minmin(when);
+      default:
+        return this.cue(ev, when);
+    }
+  }
+
+  /** A short glass phrase straight into the mix (and a little reverb): a few oscillators, no buffers. */
+  private cue(c: Cue, when: number): void {
+    const ctx = this.ctx;
+    for (const [f, delay, g] of CUES[c]) {
+      const t0 = when + delay;
+      const dry = ctx.createGain();
+      const wet = ctx.createGain();
+      wet.gain.value = 0.35;
+      dry.connect(this.mix);
+      dry.connect(wet).connect(this.verbIn);
+      for (const [k, a, tau] of GLASS) {
+        const o = ctx.createOscillator();
+        o.frequency.value = f * k;
+        const e = ctx.createGain();
+        e.gain.setValueAtTime(0, t0);
+        e.gain.linearRampToValueAtTime(g * a, t0 + 0.005);
+        e.gain.setTargetAtTime(0, t0 + 0.005, tau);
+        o.connect(e).connect(dry);
+        o.start(t0);
+        o.stop(t0 + 0.05 + tau * 7);
+      }
     }
   }
 }
