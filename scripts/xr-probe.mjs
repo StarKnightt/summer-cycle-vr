@@ -2,12 +2,17 @@
 /**
  * Headset draw-call probe in the IWER emulator: enters VR, then reports views per frame, sun
  * shadow calls and total calls for a few detail settings. Needs `pnpm dev` (port 5421).
- *   node scripts/xr-probe.mjs [--url=http://localhost:5421/]
+ *   node scripts/xr-probe.mjs [--url=http://localhost:5421/] [--route] [--level=0..3] [--time=golden]
+ * --route samples spots along the guided ride (per eye, worst case last) and skips the rest.
  */
 import { chromium } from "playwright";
 
 const argv = process.argv.slice(2);
 const URL = argv.find((a) => a.startsWith("--url="))?.slice(6) ?? "http://localhost:5421/";
+const LEVEL = argv.find((a) => a.startsWith("--level="))?.slice(8);
+const TIME = argv.find((a) => a.startsWith("--time="))?.slice(7);
+/** Road z of the sampled spots: the opening, the shop row, the paddies, the hamlet, the shrine. */
+const ROUTE = [-54, -90, -120, -160, -200, -250, -330, -420, -520, -600];
 const browser = await chromium.launch({
   channel: "chromium",
   headless: true,
@@ -19,6 +24,54 @@ try {
   await page.waitForFunction(() => window.__ride?.waiting === true, null, { timeout: 180000 });
   await page.click("#xr-enter");
   await page.waitForFunction(() => window.__ride.xr.state.presenting, null, { timeout: 20000 });
+  if (LEVEL !== undefined) await page.evaluate((l) => window.__ride.xr.mode.adaptive.force(l), Number(LEVEL));
+  if (TIME) await page.evaluate((t) => window.__ride.setTime(t, true), TIME);
+  if (argv.includes("--route")) {
+    // Per-eye calls / triangles at each spot, counted per draw over two headset frames.
+    const out = [];
+    for (const z of ROUTE) {
+      await page.evaluate((z) => window.__ride.place(-0.9, z, 0), z);
+      await page.waitForTimeout(1600);
+      const r = await page.evaluate(async () => {
+        const rd = window.__rideRenderer, m = window.__ride.xr.mode, orig = m.render.bind(m);
+        const views = rd.xr.getCamera().cameras.length || 1;
+        const res = { eye: [0, 0], shadow: [0, 0] };
+        const hook = (o) => {
+          if (!o.isMesh || o.__probe) return;
+          o.__probe = true;
+          const prev = o.onBeforeRender;
+          o.onBeforeRender = function (a, b, cam, geo, mat, grp) {
+            prev.call(this, a, b, cam, geo, mat, grp);
+            if (!window.__probeOn) return;
+            const k = cam.isOrthographicCamera ? "shadow" : "eye";
+            const n = ((geo.index ? geo.index.count : geo.attributes.position.count) / 3) * (this.isInstancedMesh ? this.count : 1);
+            window.__probeAcc[k][0]++;
+            window.__probeAcc[k][1] += n;
+          };
+        };
+        window.__ride.scene.traverse(hook);
+        window.__probeAcc = res;
+        let left = 2;
+        await new Promise((done) => {
+          m.render = (...a) => {
+            window.__probeOn = left > 0;
+            orig(...a);
+            window.__probeOn = false;
+            if (--left === 0) done();
+          };
+        });
+        m.render = orig;
+        return { calls: Math.round(res.eye[0] / 2 / views), tris: Math.round(res.eye[1] / 2 / views), shadowCalls: Math.round(res.shadow[0] / 2), level: m.adaptive.current.name };
+      });
+      out.push({ z, ...r });
+      console.log(`z ${z}: ${r.calls} calls, ${Math.round(r.tris / 1000)}k tris per eye; shadow ${r.shadowCalls} calls/frame avg (${r.level})`);
+    }
+    const worst = (k) => out.reduce((a, b) => (b[k] > a[k] ? b : a));
+    console.log(`worst calls: ${worst("calls").calls} at z ${worst("calls").z}; worst tris: ${Math.round(worst("tris").tris / 1000)}k at z ${worst("tris").z}`);
+    console.log(`mean: ${Math.round(out.reduce((s, o) => s + o.calls, 0) / out.length)} calls, ${Math.round(out.reduce((s, o) => s + o.tris, 0) / out.length / 1000)}k tris per eye`);
+    await browser.close();
+    process.exit(0);
+  }
   await page.evaluate(() => window.__ride.place(-0.9, -120, 0));
   await page.waitForTimeout(1500);
   const read = () =>

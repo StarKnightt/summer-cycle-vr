@@ -18,7 +18,7 @@ const arg = (n, d) => {
   return hit ? hit.slice(n.length + 3) : d;
 };
 const URL = arg("url", "http://localhost:5421/");
-const OUT = path.join(ROOT, arg("out", "shots/xr"));
+const OUT = path.resolve(ROOT, arg("out", "shots/xr"));
 const TIER = arg("tier", "quest");
 const W = 1600, H = 1000;
 
