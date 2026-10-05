@@ -7,7 +7,9 @@ import { bambooGrove, farHouse, fence, house, pole, postBox, scarecrow, school, 
 import { boulder, butterfly, floretCluster, flower, flowerSpike, fringeGrass, grassClump, leafPlant, riceTuft, shortGrass, vergeClump } from "./vegetation";
 import { poleLamp } from "./lights";
 import { roadMaterial, specializeUber, uber, waterMaterial } from "../render/materials";
+import { withEdges } from "../render/edges";
 import { LAYER_REFLECT, LAYER_SHADOW, onLayers } from "../render/lightpasses";
+import { QUEST } from "../xr/tier";
 import { mulberry32, pick, range, type Rng } from "../core/rng";
 
 type Geo = THREE.BufferGeometry;
@@ -931,12 +933,14 @@ export function buildChunk(k: number): Chunk {
     onLayers(o, ...layers);
     group.add(o);
   };
-  if (houseG.length) add(mesh(merge(houseG), uber(ID.house, 1)), S, R);
+  // Quest tier: houses, street furniture and fences carry their hard edges for the headset ink.
+  const inked = (g: Geo) => (QUEST ? withEdges(g) : g);
+  if (houseG.length) add(mesh(inked(merge(houseG)), uber(ID.house, 1)), S, R);
   if (farProps.length) add(mesh(merge(farProps), uber(ID.house, 1)));
   add(instMesh(P.bamboo, uber(ID.tree, -1, THREE.DoubleSide), bamboo));
-  if (infraG.length) add(mesh(merge(infraG), uber(ID.pole, 1)), S, R);
+  if (infraG.length) add(mesh(inked(merge(infraG)), uber(ID.pole, 1)), S, R);
   if (wireG.length) add(mesh(merge(wireG), uber(ID.wire, 0.8)), S, R);
-  if (fenceG.length) add(mesh(merge(fenceG), uber(ID.fence, 1, THREE.DoubleSide)), S, R);
+  if (fenceG.length) add(mesh(inked(merge(fenceG)), uber(ID.fence, 1, THREE.DoubleSide)), S, R);
   if (bermG.length) add(mesh(merge(bermG), uber(ID.berm, 0.6)), R);
   if (waterG.length) add(mesh(merge(waterG), waterMaterial()));
   const dbl = THREE.DoubleSide;

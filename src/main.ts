@@ -317,6 +317,7 @@ const xr = new XRMode({
     requestAnimationFrame(frame);
   },
 });
+xr.precompile(post.mrt, chase.cam);
 xr.session.button.addEventListener("click", () => {
   // Before the ride starts the loader takes this click (and enters VR from its callback).
   if (started && !waiting) {

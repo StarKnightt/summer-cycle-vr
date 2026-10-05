@@ -43,6 +43,8 @@ export const G = {
   uDither: { value: 0 },
   /** Grass parting around her feet when she walks: (x, z, radius, strength). */
   uPush: { value: new THREE.Vector4(0, 0, 0.8, 0) },
+  /** 1 while the headset draws with its own look (ink, sky): the desktop post chain is off there. */
+  uXRLook: { value: 0 },
   ...TOD,
 };
 
@@ -70,6 +72,7 @@ uniform vec2 uShadowTexel;
 uniform float uShadowRange;
 uniform vec3 uShadowCenter;
 uniform float uShadowHalf;
+uniform float uXRLook;
 ${TOD_GLSL}
 
 float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -271,11 +274,13 @@ const UBER_VS = /* glsl */ `
 ${COMMON}
 in float aMat;
 in float aWind;
+in vec3 aEdge;
 out vec3 vWPos;
 out vec3 vN;
 out vec3 vCol;
 out vec2 vUv;
 out vec3 vObj;
+out vec3 vEdge;
 flat out int vMat;
 
 vec3 windOffset(vec3 wp, float w){
@@ -344,6 +349,7 @@ void main(){
 #endif
   vUv = uv;
   vObj = position;
+  vEdge = aEdge;
   vMat = mt;
   gl_Position = projectionMatrix * viewMatrix * wp;
   if (mt == 21 && uNoFringe > 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
@@ -366,6 +372,7 @@ in vec3 vN;
 in vec3 vCol;
 in vec2 vUv;
 in vec3 vObj;
+in vec3 vEdge;
 flat in int vMat;
 // Per-material extras (see uberWith): bike lamp glow, spoke motion blur.
 uniform float uLamp;
@@ -393,6 +400,26 @@ float aaLine(float x, float hw){
 float aaStep(float e, float x){ float w = fwidth(x) * 0.7 + 1e-5; return smoothstep(e - w, e + w, x); }
 // Fine-detail fade: 1 while the pattern of frequency x is resolvable, 0 when it would alias.
 float aaKeep(float x){ return 1.0 - smoothstep(0.15, 0.45, fwidth(x)); }
+
+// Headset ink (uXRLook): there is no post pass to find edges in. Two lines, each about 1.5 px wide
+// at any distance (distances divided by their screen-space rate of change):
+// - contour: smooth surfaces darken where they turn away from the eye (|N.V| -> 0); flat faces
+//   never do. abs() keeps meshes with inward normals from inking all over;
+// - crease: faceted props carry their hard edges per corner (vEdge, see edges.ts).
+// Triangles only a few pixels across get no crease line (lattices would fill in). Weighted by the
+// outline mask and faded with distance like the desktop ink. Call in uniform control flow (fwidth).
+vec3 xrInk(vec3 col, vec3 N, vec3 wpos, float mask){
+  vec3 V = cameraPosition - wpos;
+  float d = length(V);
+  float ndv = abs(dot(N, V) / d);
+  float contour = 1.0 - smoothstep(0.7, 1.7, ndv / max(fwidth(ndv), 1e-4));
+  vec3 t = 1.0 - vEdge;
+  vec3 tw = fwidth(t);
+  vec3 px = t / max(tw, vec3(1e-5));
+  float crease = (1.0 - smoothstep(0.6, 1.6, min(px.x, min(px.y, px.z)))) * (1.0 - smoothstep(0.1, 0.3, max(tw.x, max(tw.y, tw.z))));
+  float e = max(contour, crease) * clamp(mask, 0.0, 1.0) * (1.0 - smoothstep(40.0, 320.0, d) * 0.8);
+  return mix(col, mix(col * 0.22, vec3(0.011, 0.007, 0.009), 0.55), e * 0.9);
+}
 
 void main(){
   vec3 N = normalize(vN);
@@ -683,6 +710,7 @@ void main(){
     }
     col = c;
   }
+  if (uXRLook > 0.5) col = xrInk(col, N, vWPos, mask);
   col = applyFog(col, vWPos);
   writeOut(col, N, mask);
 }
@@ -695,14 +723,22 @@ const uberCache = new Map<string, THREE.ShaderMaterial>();
  * the shared G uniforms stay shared, so it compiles to the same program as `uber`.
  */
 export function uberWith(id: number, mask: number, extra: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    glslVersion: THREE.GLSL3,
-    uniforms: { ...G, uId: { value: id }, uMask: { value: mask }, ...extra },
-    vertexShader: UBER_VS,
-    fragmentShader: UBER_FS,
-    vertexColors: true,
-    alphaToCoverage: true,
-  });
+  return noEdges(
+    new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      uniforms: { ...G, uId: { value: id }, uMask: { value: mask }, ...extra },
+      vertexShader: UBER_VS,
+      fragmentShader: UBER_FS,
+      vertexColors: true,
+      alphaToCoverage: true,
+    }),
+  );
+}
+
+/** Geometry without `aEdge` (see edges.ts) must read zeros: attribute slots are shared between programs. */
+function noEdges(m: THREE.ShaderMaterial): THREE.ShaderMaterial {
+  (m.defaultAttributeValues as Record<string, number[]>).aEdge = [0, 0, 0];
+  return m;
 }
 
 /**
@@ -713,16 +749,18 @@ export function uber(id: number, mask = 1, side: THREE.Side = THREE.FrontSide, m
   const key = `${id}|${mask}|${side}|${mts >>> 0}`;
   let m = uberCache.get(key);
   if (!m) {
-    m = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      uniforms: { ...G, uId: { value: id }, uMask: { value: mask } },
-      vertexShader: UBER_VS,
-      fragmentShader: UBER_FS,
-      defines: mts ? { MT_MASK_V: `0x${(mts >>> 0).toString(16)}u` } : {},
-      vertexColors: true,
-      side,
-      alphaToCoverage: true,
-    });
+    m = noEdges(
+      new THREE.ShaderMaterial({
+        glslVersion: THREE.GLSL3,
+        uniforms: { ...G, uId: { value: id }, uMask: { value: mask } },
+        vertexShader: UBER_VS,
+        fragmentShader: UBER_FS,
+        defines: mts ? { MT_MASK_V: `0x${(mts >>> 0).toString(16)}u` } : {},
+        vertexColors: true,
+        side,
+        alphaToCoverage: true,
+      }),
+    );
     m.userData.uber = { id, mask, side };
     uberCache.set(key, m);
   }

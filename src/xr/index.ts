@@ -18,6 +18,7 @@ import { INK, Panel, text, washiCard } from "./ui";
 import { XR_TIER } from "./tier";
 import { Proxies } from "./proxies";
 import { Adaptive, levels } from "./adaptive";
+import { XR_LOOK } from "./look";
 
 export { installXrOutput } from "./grade";
 export { XR_TIER, QUEST } from "./tier";
@@ -144,6 +145,19 @@ export class XRMode {
     return this.session.presenting;
   }
 
+  /**
+   * Compile every headset material behind the loader, hidden ones included (prompts, ghost hands,
+   * the end card), so nothing compiles on entering VR or mid-ride. An offscreen target has the same
+   * program keys as the XR target (linear output, no tone mapping).
+   */
+  precompile(target: THREE.WebGLRenderTarget, camera: THREE.Camera): void {
+    const { renderer, scene } = this.d;
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(target);
+    for (const o of [this.session.rig, this.worldGroup, this.proxies.group]) renderer.compile(o, camera, scene);
+    renderer.setRenderTarget(prev);
+  }
+
   private start(): void {
     const d = this.d;
     this.session.rig.visible = this.worldGroup.visible = true;
@@ -156,6 +170,7 @@ export class XRMode {
     this.proxies.snap();
     this.shadowK = this.shadowEvery ? 1 : 0;
     REFL.uReflOn.value = 0;
+    G.uXRLook.value = XR_LOOK ? 1 : 0;
     if (!this.started) this.restart();
     this.started = true;
     this.setPaused(false);
@@ -169,6 +184,7 @@ export class XRMode {
     this.proxies.setActive(false);
     d.world.setDetail(1, Infinity, 130);
     REFL.uReflOn.value = 1;
+    G.uXRLook.value = 0;
     d.input.xr = null;
     this.paused = false;
     d.audio.setPaused(false);
