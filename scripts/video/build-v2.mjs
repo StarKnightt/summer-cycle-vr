@@ -17,6 +17,8 @@ const argv = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] 
 const TL = path.resolve(EDIT, argv.timeline || "timeline-v2.json");
 const T = JSON.parse(fs.readFileSync(TL, "utf8"));
 const W = T.width || 1920, H = T.height || 1080, CRF = T.crf ?? 18, SEG_CRF = T.sectionCrf ?? 13;
+/** Names this cut's caches, resolved timeline and review folder (timeline `tag`, default v2). */
+const TAG = T.tag || "v2";
 
 // ------------------------------------------------------------------ speed maps
 
@@ -131,7 +133,7 @@ async function renderSection(s, idx) {
       cur = o;
     }
   } else if (s.kind === "card") {
-    const c = await gfx(`v2card-${s.id}`, { ...s.card, w: W, h: H }, { seconds: s.dur, alpha: false, html: s.card.html || "kinetic.html" });
+    const c = await gfx(`${TAG}card-${s.id}`, { ...s.card, w: W, h: H }, { seconds: s.dur, alpha: false, html: s.card.html || "kinetic.html" });
     deps.push(c.dir);
     const k = add("-framerate", String(FPS), "-i", c.pattern);
     g.push(`[${k}:v]format=yuv420p[card]`);
@@ -141,8 +143,8 @@ async function renderSection(s, idx) {
     const x0 = Math.round((W - 2 * bw - gap) / 2), y0 = Math.round((H - bh) / 2) - 10;
     const L = s.split.left, R = s.split.right;
     const boxes = [{ x: x0, y: y0, w: bw, h: bh, kicker: L.kicker, label: L.label }, { x: x0 + bw + gap, y: y0, w: bw, h: bh, kicker: R.kicker, label: R.label }];
-    const bg = await gfx(`split-bg-${s.id}`, { type: "splitbg", w: W, h: H, boxes });
-    const fg = await gfx(`split-fg-${s.id}`, { type: "splitfg", w: W, h: H, boxes });
+    const bg = await gfx(`${TAG}split-bg-${s.id}`, { type: "splitbg", w: W, h: H, boxes });
+    const fg = await gfx(`${TAG}split-fg-${s.id}`, { type: "splitfg", w: W, h: H, boxes });
     deps.push(bg.dir, fg.dir);
     const kb = add("-loop", "1", "-framerate", String(FPS), "-i", bg.first);
     const kf = add("-loop", "1", "-framerate", String(FPS), "-i", fg.first);
@@ -159,7 +161,7 @@ async function renderSection(s, idx) {
 
   // Hand rings sit on the footage, so they zoom with it.
   for (const [j, c] of (s.callouts || []).entries()) {
-    const a = await gfx(`callout-${s.id}-${j}`, { type: "callout", w: W, h: H, x: c.x, y: c.y, r: c.r, label: c.label, labelSide: c.labelSide }, { seconds: 1.3 });
+    const a = await gfx(`${TAG}callout-${s.id}-${j}`, { type: "callout", w: W, h: H, x: c.x, y: c.y, r: c.r, label: c.label, labelSide: c.labelSide }, { seconds: 1.3 });
     deps.push(a.dir);
     const k = add("-framerate", String(FPS), "-i", a.pattern);
     g.push(timedOverlay(k, `co${j}`, { start: secTime(s, c), dur: c.dur || 1.6, animFrames: a.frames, fadeOut: 0.35 }));
@@ -171,7 +173,7 @@ async function renderSection(s, idx) {
 
   // Kinetic text and other full-animation layers ride above the zoom.
   for (const [j, l] of (s.layers || []).entries()) {
-    const a = await gfx(`layer-${s.id}-${j}`, { ...l.spec, w: W, h: H }, { seconds: l.dur, html: l.spec.html || "kinetic.html" });
+    const a = await gfx(`${TAG}layer-${s.id}-${j}`, { ...l.spec, w: W, h: H }, { seconds: l.dur, html: l.spec.html || "kinetic.html" });
     deps.push(a.dir);
     const k = add("-framerate", String(FPS), "-i", a.pattern);
     g.push(`[${k}:v]format=rgba,setpts=PTS+${fx(secTime(s, l))}/TB[ly${j}]`);
@@ -186,10 +188,10 @@ async function renderSection(s, idx) {
 
   const { vo, start, sfx, tin, bed, accents, gainDb, ...visual } = s;
   const key = hash({ visual, deps, W, H, SEG_CRF, v: 2 });
-  const out = path.join(CACHE, `v2seg-${String(idx).padStart(2, "0")}-${s.id}-${key}.mp4`);
+  const out = path.join(CACHE, `${TAG}seg-${String(idx).padStart(2, "0")}-${s.id}-${key}.mp4`);
   if (!fs.existsSync(out)) {
-    for (const f of fs.readdirSync(CACHE)) if (f.startsWith(`v2seg-${String(idx).padStart(2, "0")}-`)) fs.rmSync(path.join(CACHE, f));
-    ff([...inputs, ...graphArgs(`v2seg-${s.id}`, g.join(";\n")), "-map", "[out]", "-frames:v", String(s.frames),
+    for (const f of fs.readdirSync(CACHE)) if (f.startsWith(`${TAG}seg-${String(idx).padStart(2, "0")}-`)) fs.rmSync(path.join(CACHE, f));
+    ff([...inputs, ...graphArgs(`${TAG}seg-${s.id}`, g.join(";\n")), "-map", "[out]", "-frames:v", String(s.frames),
       "-c:v", "libx264", "-preset", "medium", "-profile:v", "high", "-crf", String(SEG_CRF), "-pix_fmt", "yuv420p", "-r", String(FPS), "-g", "30",
       "-video_track_timescale", "15360", "-an", out], `section ${s.id} (${s.dur.toFixed(2)} s)`);
   } else console.log(`  section ${s.id}: cached`);
@@ -233,9 +235,9 @@ console.log(`Timeline ${path.relative(REEL, TL)}: ${T.sections.length} sections,
 const segs = [];
 for (const [i, s] of T.sections.entries()) segs.push(await renderSection(s, i));
 
-const list = path.join(CACHE, "v2concat.txt");
+const list = path.join(CACHE, `${TAG}concat.txt`);
 fs.writeFileSync(list, segs.map((f) => `file '${f.replace(/\\/g, "/")}'`).join("\n"));
-const video = path.join(CACHE, "v2video.mp4");
+const video = path.join(CACHE, `${TAG}video.mp4`);
 ff(["-f", "concat", "-safe", "0", "-i", list, "-c", "copy", video], "join sections");
 
 // Transitions over cuts (section `tin`), each centred on the cut.
@@ -270,9 +272,17 @@ const py = (args, label) => { const r = spawnSync("python", [path.join(HERE, "ma
 if (!fs.existsSync(path.join(SFX, "chime-e.wav")) || fs.statSync(path.join(SFX, "chime-e.wav")).mtimeMs < fs.statSync(path.join(HERE, "make-audio.py")).mtimeMs) py(["sfx", SFX], "sfx");
 const extras = [];
 const M = T.music;
+/** A time in output seconds: a number, or "sectionId+seconds" / "sectionId-seconds" from that section's start. */
+const atTime = (k) => {
+  if (typeof k === "number") return k;
+  const m = /^([a-z0-9_]+)([+-]\d+(?:\.\d+)?)?$/i.exec(k);
+  const s = m && T.sections.find((x) => x.id === m[1]);
+  if (!s) throw new Error(`music level key ${k}: no such section`);
+  return +(s.start + Number(m[2] || 0)).toFixed(3);
+};
 if (M) {
   const endS = T.sections.find((s) => s.id === M.endSection);
-  const spec = { total: TOTAL, endStart: endS ? endS.start : TOTAL - 6, fadeIn: M.fadeIn ?? 2, level: M.level || [[0, 0]], v: fs.statSync(path.join(HERE, "make-audio.py")).mtimeMs };
+  const spec = { total: TOTAL, endStart: endS ? endS.start : TOTAL - 6, fadeIn: M.fadeIn ?? 2, level: (M.level || [[0, 0]]).map(([t, db]) => [atTime(t), db]), v: fs.statSync(path.join(HERE, "make-audio.py")).mtimeMs };
   const mf = path.join(CACHE, `music-${hash(spec)}.wav`);
   if (!fs.existsSync(mf)) { fs.writeFileSync(path.join(CACHE, "music-spec.json"), JSON.stringify(spec)); py(["music", path.join(CACHE, "music-spec.json"), mf], "music"); }
   extras.push({ file: mf, at: 0, gainDb: M.gainDb ?? -12, duckDb: M.duckDb ?? -7 });
@@ -287,7 +297,7 @@ for (const s of T.sections) for (const x of s.sfx || []) extras.push({ file: pat
 
 const bedFile = media(A.bed || "audio-ride-bed.m4a");
 const voice = { ...A.voice, file: path.resolve(EDIT, A.voice.file), pieces: voPieces };
-const wav = buildAudio("v2", { bed: bedFile, bedLength: Number(probe(bedFile).format.duration), pieces, total: TOTAL, handle: A.handle ?? 0.35, baseGainDb: A.baseGainDb ?? 0, accents, voice, targetLufs: A.targetLufs, ceilingDb: A.ceilingDb, extras });
+const wav = buildAudio(TAG, { bed: bedFile, bedLength: Number(probe(bedFile).format.duration), pieces, total: TOTAL, handle: A.handle ?? 0.35, baseGainDb: A.baseGainDb ?? 0, accents, voice, targetLufs: A.targetLufs, ceilingDb: A.ceilingDb, extras });
 
 // ------------------------------------------------------------------ compose + mux
 
@@ -307,7 +317,7 @@ async function compose(out, withCaptions) {
     cur = "vc";
   }
   g.push(`[${cur}]format=yuv420p[vout]`);
-  ff([...inputs, ...graphArgs(`v2compose-${withCaptions ? "cap" : "clean"}`, g.join(";\n")), "-map", "[vout]", "-map", "1:a", "-frames:v", String(f0),
+  ff([...inputs, ...graphArgs(`${TAG}compose-${withCaptions ? "cap" : "clean"}`, g.join(";\n")), "-map", "[vout]", "-map", "1:a", "-frames:v", String(f0),
     "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-crf", String(CRF), "-pix_fmt", "yuv420p", "-r", String(FPS), "-g", "60",
     "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", out], `compose ${path.basename(out)}`);
 }
@@ -324,10 +334,10 @@ fs.writeFileSync(path.join(EDIT, T.subtitles || "subtitles-v2.srt"), srt(subs));
 
 const resolved = T.sections.map((s) => ({ id: s.id, start: +s.start.toFixed(3), end: +(s.start + s.dur).toFixed(3), dur: +s.dur.toFixed(3),
   vo: voPieces.filter((v) => v.section === s.id).map((v) => `${v.p} ${v.at.toFixed(2)}-${(v.at + v.to - v.from).toFixed(2)}`).join(", ") || undefined }));
-fs.writeFileSync(path.join(EDIT, "timeline-v2.resolved.json"), JSON.stringify({ total: +TOTAL.toFixed(3), sections: resolved, phrases: PH }, null, 1));
+fs.writeFileSync(path.join(EDIT, `timeline-${TAG}.resolved.json`), JSON.stringify({ total: +TOTAL.toFixed(3), sections: resolved, phrases: PH }, null, 1));
 
 if (argv.sheet) {
-  const dir = path.join(EDIT, "review", "v2");
+  const dir = path.join(EDIT, "review", TAG);
   fs.mkdirSync(dir, { recursive: true });
   const step = Number(argv.step || 3);
   const n = Math.ceil(TOTAL / step);

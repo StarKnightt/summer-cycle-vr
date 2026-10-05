@@ -13,7 +13,10 @@
  * fingertip) and its target, in reference space, so hands never jump. The head sways gently.
  *
  *   pnpm dev                                  (http://localhost:5421/)
- *   node scripts/xr-reel.mjs [--only=ride|desktop|stereo|audio|encode] [--keep]
+ *   node scripts/xr-reel.mjs [--only=ride|steer|desktop|stereo|audio|encode] [--keep]
+ *
+ * ride: the guided ride with each lesson's ghost hands on camera, from Enter VR to the end card
+ * and Ride again; steer: a second session past the lessons (steering, hands lost mid-ride).
  *
  * Frames go to %TEMP%/summer-cycle-xr-reel/<clip>/ (kept with --keep; --only=encode re-encodes).
  * --only=audio records a real-time soundtrack bed (the game's Web Audio output) to
@@ -282,10 +285,45 @@ function pose(R) {
     p[0] += 0.0025 * Math.sin(T * 1.1 + ph) + 0.0012 * Math.sin(T * 2.7 + ph * 2);
     p[1] += 0.002 * Math.sin(T * 0.9 + ph * 1.7) + 0.001 * Math.sin(T * 3.1 + ph);
     p[2] += 0.002 * Math.sin(T * 1.3 + ph * 0.6);
-    out[side] = { pos: p, quat: h.quat.at(T), pinch: clamp01(h.pinch.at(T)), pose: h.pose, feature: h.feature };
+    out[side] = { pos: p, quat: h.quat.at(T), pinch: clamp01(h.pinch.at(T)), pose: h.pose, feature: h.feature, raw: !!h.raw };
   }
   return out;
 }
+
+/** The steering pivot at grip height (bike space, see src/xr/bars.ts). */
+const PIVOT = [0, 1.05, -0.382];
+/** Turn the bars about the stem: the grip targets rotated by `deg` about the pivot. */
+const bars = (deg) => {
+  const a = (deg * Math.PI) / 180, P = PIVOT;
+  return ["left", "right"].map((s) => {
+    const g = GRIP[s], x = g[0] - P[0], z = g[2] - P[2];
+    return [P[0] + x * Math.cos(a) + z * Math.sin(a), g[1], P[2] - x * Math.sin(a) + z * Math.cos(a)];
+  });
+};
+/** Hands resting in the lap, in reference space (raw device positions, below the view). */
+const RAW_LAP = { left: [-0.2, 0.5, 0.1], right: [0.2, 0.5, 0.1] };
+
+/**
+ * Ghost-hand lessons loop with a fixed period from when their lesson began. Seconds until the
+ * next pass starts, read from the page (the virtual clock steps them exactly 1/30 s a frame).
+ */
+const ghostLeft = async (page, period) => {
+  const t = await page.evaluate(() => window.__ride.xr.mode.ghost.t);
+  return (period - (t % period)) % period;
+};
+/** Ride on until `lead` seconds before the ghost hands' next pass. */
+async function ghostSync(page, R, period, lead = 0) {
+  let w = (await ghostLeft(page, period)) - lead;
+  while (w < 0) w += period;
+  await frames(page, R, w);
+}
+/** Bike-space point far out toward the sky's sun (for aiming the head at a low sun). */
+const skySun = (page) =>
+  page.evaluate(() => {
+    const T = window.__THREE, m = window.__ride.xr.mode;
+    const d = m.glow.mesh.material.uniforms.uSkySun.value.clone().applyQuaternion(m.session.rig.getWorldQuaternion(new T.Quaternion()).invert());
+    return [d.x * 100, 1.44 + d.y * 100, 0.2 + d.z * 100];
+  });
 
 let clipDir = null, clipFrames = 0;
 async function frames(page, R, secs, each) {
@@ -338,8 +376,10 @@ async function ride() {
     // Calibrate on the scripted seated head (as the player would with a quick recenter).
     await frames(page, R, 0.2);
     await page.evaluate(() => window.__ride.xr.mode.session.recenter());
-    // First moments in the headset: the start card over the basket, hands still in the lap.
-    await frames(page, R, 2.4);
+    // First moments in the headset: the start card over the basket and ghost hands settling onto
+    // the grips (the hold lesson), her own hands still in the lap. Ends as the ghosts' next pass begins.
+    R.pitch.go(-21, 1.6, R.T);
+    await ghostSync(page, R, 2.8);
   });
 
   // Palms down onto the grips (a little forward), measured from the live hands.
@@ -348,8 +388,9 @@ async function ride() {
     R[s].quat.go(Q[s === "left" ? "gripL" : "gripR"], 0.01, R.T);
   }
   await clip("02-grab-bars-ride-off", async () => {
-    R.pitch.go(-24, 1.6, R.T);
-    await frames(page, R, 0.6);
+    // Her hands come up and follow the ghost hands' next pass down onto the grips.
+    R.pitch.go(-24, 1.4, R.T);
+    await frames(page, R, 0.3);
     R.left.pos.go(GRIP.left, 1.5, R.T, 0.05);
     await frames(page, R, 0.25);
     R.right.pos.go(GRIP.right, 1.45, R.T, 0.05);
@@ -358,46 +399,28 @@ async function ride() {
     await frames(page, R, 4.2);
     await still("02-hands-on-bars");
   });
+  const sGrab = await state(page);
 
   await clip("04-brake-pinch", async () => {
-    await frames(page, R, 0.8);
+    // The brake lesson: one ghost pinch just above the right grip, then she pinches on the bars.
     R.pitch.go(-22, 0.9, R.T);
-    R.right.pinch.go(1, 0.7, R.T);
-    R.left.pinch.go(0.85, 0.8, R.T);
-    await frames(page, R, 2.6);
+    R.yaw.go(-3, 0.9, R.T);
+    await frames(page, R, 0.5);
+    await ghostSync(page, R, 2.0, 0.15);
+    await frames(page, R, 1.6);
+    R.right.pinch.go(1, 0.6, R.T);
+    R.left.pinch.go(0.85, 0.7, R.T);
+    await frames(page, R, 2.4);
     R.right.pinch.go(0, 0.6, R.T);
     R.left.pinch.go(0, 0.6, R.T);
     R.pitch.go(-13, 1.8, R.T);
-    await frames(page, R, 2.6);
+    R.yaw.go(0, 1.8, R.T);
+    await frames(page, R, 2.2);
   });
+  const sBrake = await state(page);
 
-  // Ride on toward the shop row (not captured), then steer gently through it.
-  await frames(page, R, 3.0);
-  const bars = (deg) => {
-    // Turn the bars about the stem: rotate the grip targets by `deg` about the pivot.
-    const a = (deg * Math.PI) / 180, P = [0, 1.05, -0.382];
-    return ["left", "right"].map((s) => {
-      const g = GRIP[s], x = g[0] - P[0], z = g[2] - P[2];
-      return [P[0] + x * Math.cos(a) + z * Math.sin(a), g[1], P[2] - x * Math.sin(a) + z * Math.cos(a)];
-    });
-  };
-  await clip("03-steering-through-village", async () => {
-    const steer = async (deg, dur, hold) => {
-      const [l, r] = bars(deg);
-      R.left.pos.go(l, dur, R.T);
-      R.right.pos.go(r, dur, R.T);
-      await frames(page, R, hold);
-    };
-    R.yaw.go(14, 3.5, R.T);
-    await steer(-5, 1.6, 2.6);
-    await steer(4, 2.0, 2.4);
-    R.yaw.go(-10, 4, R.T);
-    await steer(7, 1.8, 2.6);
-    R.yaw.go(4, 3, R.T);
-    await steer(-3, 1.8, 2.4);
-    await steer(0, 1.4, 2.2);
-  });
-
+  // Ride on a moment (not captured), then the bell lesson.
+  await frames(page, R, 0.6);
   await clip("05-bell-ring", async () => {
     const bell = await page.evaluate(() => {
       const THREE = window.__THREE, v = window.__ride.bike.bellWorld(new THREE.Vector3());
@@ -406,46 +429,69 @@ async function ride() {
     R.pitch.go(-26, 1.0, R.T);
     R.yaw.go(-6, 1.0, R.T);
     await frames(page, R, 1.0);
+    // A ghost thumb taps the dome; hers follows as it lifts away.
+    await ghostSync(page, R, 2.2, 0.1);
+    await frames(page, R, 1.35);
     R.left.feature = "thumb";
     const start = await page.evaluate(() => window.__reelLocal("left", "thumb"));
+    const palm0 = await page.evaluate(() => window.__reelLocal("left", "palm"));
+    // The scripted hand is rigid, so its palm travels with the thumb, and a held palm turned about
+    // the stem steers. A real thumb flick leaves the palm put: turn the right hand the other way
+    // so the bars stay straight.
+    const stem = (p) => Math.atan2(-(p[2] - PIVOT[2]), p[0] - PIVOT[0]);
+    const flick = () => {
+      const p = R.left.pos.at(R.T).map((v, i) => v + palm0[i] - start[i]);
+      const g = GRIP.right, r = Math.hypot(g[0] - PIVOT[0], g[2] - PIVOT[2]), a = stem(g) - (stem(p) - stem(palm0));
+      R.right.pos = new Track([PIVOT[0] + r * Math.cos(a), g[1], PIVOT[2] - r * Math.sin(a)]);
+    };
     R.left.pos = new Track(start);
-    R.left.pos.go([bell[0] + 0.005, bell[1] + 0.012, bell[2] + 0.02], 0.55, R.T, 0.015);
-    await frames(page, R, 0.7);
+    R.left.pos.go([bell[0] + 0.005, bell[1] + 0.012, bell[2] + 0.02], 0.5, R.T, 0.015);
+    await frames(page, R, 0.6, flick);
     R.left.pos.go([bell[0], bell[1] + 0.005, bell[2] + 0.004], 0.18, R.T);
-    await frames(page, R, 0.35);
+    await frames(page, R, 0.35, flick);
     R.left.pos.go(start, 0.5, R.T, 0.01);
-    await frames(page, R, 0.7);
+    await frames(page, R, 0.7, flick);
     R.left.feature = "palm";
     R.left.pos = new Track(GRIP.left);
+    R.right.pos = new Track(GRIP.right);
     R.pitch.go(-15, 1.6, R.T);
     R.yaw.go(0, 1.6, R.T);
-    await frames(page, R, 2.4);
+    await frames(page, R, 1.6);
   });
   const sBell = await state(page);
 
+  // The drag ends at 2.2 (between sunset and dusk): the little sun rests just above the real one
+  // as it sets, and the glow around a low sun is at its strongest.
+  const SUN_END = 2.2;
   await clip("06-reach-and-drag-sun", async () => {
     const arc = (s) => page.evaluate((s) => window.__ride.xrArc(s), s);
     const pts = [];
-    for (let i = 0; i <= 60; i++) pts.push(await arc((i / 60) * 2.3));
-    // Ride a moment in the afternoon, then glance up at the little sun.
-    R.pitch.go(-4, 2.4, R.T);
-    await frames(page, R, 2.0);
-    look(R, pts[0], 2.4, -14, -6);
-    await frames(page, R, 1.4);
-    // The right hand leaves the bar and reaches up, fingers open.
+    for (let i = 0; i <= 60; i++) pts.push(await arc((i / 60) * SUN_END));
+    // Ride a moment in the afternoon, then glance up at the little sun (its arc shows while the
+    // lesson points at it), timed so the ghost hand's next pass starts as the eyes settle on it.
+    R.pitch.go(-4, 2.0, R.T);
+    const LOOK = 2.6;
+    let w = await ghostLeft(page, 4.4);
+    if (w < 1.0 + LOOK) w += 4.4;
+    await frames(page, R, w - LOOK);
+    look(R, pts[0], 2.2, -14, -6);
+    await frames(page, R, LOOK);
+    // The ghost hand reaches up, pinches the sun and pulls it a little way down its arc.
+    await frames(page, R, 2.5);
+    // Her right hand leaves the bar and reaches up from below as the ghost lets go.
     const here = await page.evaluate(() => window.__reelLocal("right", "pinch"));
     R.right.feature = "pinch";
     R.right.pos = new Track(here);
-    R.right.quat.go(Q.reachR, 1.8, R.T);
+    R.right.quat.go(Q.reachR, 1.5, R.T);
     const near = pts[0].map((v, i) => v + [0.035, -0.06, 0.06][i]);
-    R.right.pos.go(near, 2.0, R.T, 0.07);
-    await frames(page, R, 2.2);
-    R.right.pos.go(pts[0], 0.6, R.T);
-    await frames(page, R, 0.55);
-    R.right.pinch.go(1, 0.45, R.T);
-    await frames(page, R, 0.8);
+    R.right.pos.go(near, 1.5, R.T, 0.07);
+    await frames(page, R, 1.6);
+    R.right.pos.go(pts[0], 0.35, R.T);
+    await frames(page, R, 0.35);
+    R.right.pinch.go(1, 0.35, R.T);
+    await frames(page, R, 0.7);
     // Drag it slowly down the arc; the head follows the sun toward the hills, a beat behind.
-    const DRAG = 12;
+    const DRAG = 10.5;
     const t0 = R.T;
     const dragEach = (T) => {
       const u = (T - t0) / DRAG;
@@ -453,30 +499,31 @@ async function ride() {
       const f = k * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(f));
       const p = lerp3(pts[i], pts[i + 1], f - i);
       R.right.pos = new Track(p);
-      follow(R, p, 0.05, lerp(-14, -9, u), -6);
+      follow(R, p, 0.05, lerp(-14, -1, u), -6);
     };
     await frames(page, R, DRAG * 0.42, dragEach);
     await still("08-drag-sun-golden");
     await frames(page, R, DRAG * 0.58, dragEach);
-    await frames(page, R, 0.6);
-    R.right.pinch.go(0, 0.5, R.T);
-    await frames(page, R, 0.8);
-    // Let go, bring the hand home, and watch the sunset for a while.
+    // Holding the light: the hand rests with the little sun over the hills while the real one sets
+    // (eyes a little high: the menu lesson's ghost palm rises in front of the basket meanwhile).
+    const end = pts.at(-1);
+    await frames(page, R, 2.0, () => follow(R, end, 0.05, 0, -6));
+    R.right.pinch.go(0, 0.4, R.T);
+    await frames(page, R, 0.5);
+    // Let go and bring the hand home; the eyes stay on the low sun a moment (the menu lesson is up).
     const palmNow = await page.evaluate(() => window.__reelLocal("right", "palm"));
     R.right.feature = "palm";
     R.right.pos = new Track(palmNow);
-    R.right.pos.go(GRIP.right, 2.0, R.T, 0.03);
-    R.right.quat.go(Q.gripR, 1.8, R.T);
-    R.pitch.go(-5, 4, R.T);
-    R.yaw.go(-8, 4, R.T);
-    await frames(page, R, 3.6);
+    R.right.pos.go(GRIP.right, 1.6, R.T, 0.03);
+    R.right.quat.go(Q.gripR, 1.5, R.T);
+    look(R, await skySun(page), 2.0, -2, -4);
+    await frames(page, R, 1.8);
     await still("09-sunset-after-drag");
-    R.yaw.go(4, 6, R.T);
-    await frames(page, R, 5.0);
   });
   const sSun = await state(page);
   // At 30 fps the bike moves 14 cm a frame: a hand read a frame behind the rig misses the sun.
   if (!(sSun.sun > 1.5)) errors.push(`the sun drag did not take (time of day ${sSun.sun}, step ${sSun.step})`);
+  if (sSun.step !== "menu") errors.push(`the menu lesson is not up after the sun (step ${sSun.step})`);
 
   // Wrist menu: palm up, poke Pause, resume with a pinch.
   const openMenu = async () => {
@@ -539,8 +586,12 @@ async function ride() {
     R.yaw.go(0, dur, R.T);
   };
 
+  let menuLesson = null;
   await clip("07-wrist-menu-pause-resume", async () => {
-    await frames(page, R, 0.6);
+    // The menu lesson (a ghost palm turning up) has been up since the sun passed sunset: do it.
+    await frames(page, R, 0.3);
+    // The lesson gives up after 12 s; the palm needs about 1.5 s to open the menu.
+    menuLesson = await page.evaluate(() => ({ step: window.__ride.xr.state.step, t: +window.__ride.xr.mode.guide.t.toFixed(2) }));
     await openMenu();
     await frames(page, R, 0.3);
     await still("10-wrist-menu");
@@ -584,11 +635,26 @@ async function ride() {
   });
   const sComfort = await state(page);
 
+  // Riding on at sunset, eyes on the low sun and its glow (the "after" of the before / after).
+  await frames(page, R, 1.0);
+  await clip("06b-sunset-ride", async () => {
+    const sun = await skySun(page);
+    const [y] = aim(sun);
+    look(R, sun, 2.4, -6, Math.max(-28, Math.min(28, y)) - y);
+    await frames(page, R, 3.2);
+    R.yaw.go(R.yaw.at(R.T) * 0.6, 4, R.T);
+    await frames(page, R, 4.0);
+    R.pitch.go(-10, 2.5, R.T);
+    await frames(page, R, 2.0);
+  });
+
   // Jump ahead to the shrine approach (not captured) and ride into the ending.
   await page.evaluate(() => {
-    const r = window.__ride;
-    r.xr.mode.guide.step = "ride";
+    const r = window.__ride, m = r.xr.mode;
+    m.guide.step = "ride";
     r.place(-0.9, -158, 4.1);
+    // The skipped stretch counts as ridden at the gentle cruise, so the end card reads as a whole ride.
+    m.rideT += Math.max(0, 772 - 26 - m.dist) / 4.2;
     r.xr.skip(772 - 26);
   });
   await frames(page, R, 1.0);
@@ -602,22 +668,153 @@ async function ride() {
     // She rolls to a stop at the torii: hands come off the bars and rest.
     for (const s of ["left", "right"]) R[s].pos.go(LAP[s], 1.8, R.T, 0.02);
     look(R, torii, 3.5, -2, 6);
-    await frames(page, R, 5.0);
+    await frames(page, R, 4.4);
     await still("12-arrival-dusk");
     // Stone lanterns and the jizo by the steps, then up at the first stars and fireflies.
-    look(R, [torii[0] - 0.8, 0.9, torii[2] + 3], 3.5);
-    await frames(page, R, 4.2);
-    R.pitch.go(14, 3.5, R.T);
-    R.yaw.go(8, 3.5, R.T);
-    await frames(page, R, 4.0);
-    // Back to the card over the basket (the end card by now: what she rode, Ride again, Ride on).
-    R.pitch.go(-14, 3.2, R.T);
-    R.yaw.go(0, 3.2, R.T);
-    await frames(page, R, 4.2);
+    look(R, [torii[0] - 0.8, 0.9, torii[2] + 3], 3.2);
+    await frames(page, R, 3.4);
+    R.pitch.go(14, 3.2, R.T);
+    R.yaw.go(8, 3.2, R.T);
+    await frames(page, R, 3.4);
+    // Back to the card over the basket: the end card by now (what she rode, Ride again, Ride on).
+    R.pitch.go(-17, 3.0, R.T);
+    R.yaw.go(2, 3.0, R.T);
+    await frames(page, R, 3.6);
     await still("13-end-card");
   });
   const sEnd = await state(page);
-  console.log("states", JSON.stringify({ sBell: sBell.step, sSun: [sSun.step, sSun.sun], sMenu: sMenu.paused, sComfort, end: [sEnd.step, sEnd.speed] }));
+  if (!sEnd.end) errors.push(`the end card is not showing at the end of the shrine clip (${JSON.stringify(sEnd)})`);
+
+  // Ride again: the right index pokes the left tag, the view fades to a warm dark and back to the
+  // afternoon at the start (start card, ghost hands on the grips).
+  await clip("13-end-card-ride-again", async () => {
+    await frames(page, R, 1.0);
+    const tag = await page.evaluate(() => window.__ride.xrEndButton("again"));
+    if (!tag) return void errors.push("no Ride again tag to poke");
+    const here = await page.evaluate(() => window.__reelLocal("right", "index"));
+    R.right.feature = "index";
+    R.right.pose = "point";
+    R.right.pos = new Track(here);
+    R.right.quat.go(Q.pokeR, 0.9, R.T);
+    R.right.pos.go(tag.front, 1.1, R.T, 0.04);
+    look(R, [tag.front[0], tag.front[1] + 0.05, tag.front[2]], 1.1, 0, 0);
+    await frames(page, R, 1.2);
+    R.right.pos.go(tag.through, 0.22, R.T);
+    await frames(page, R, 0.3);
+    R.right.pos.go(tag.front, 0.25, R.T);
+    await frames(page, R, 0.25);
+    // While it is dark, the hand goes back to the lap and the head faces ahead (Ride again
+    // recentres on the head as it restarts).
+    const palm = await page.evaluate(() => window.__reelLocal("right", "palm"));
+    R.right.feature = "palm";
+    R.right.pose = "default";
+    R.right.pos = new Track(palm);
+    R.right.pos.go(LAP.right, 0.7, R.T, 0.02);
+    R.right.quat.go(Q.gripR, 0.7, R.T);
+    R.yaw.go(0, 0.45, R.T);
+    R.pitch.go(-20, 0.9, R.T);
+    for (let i = 0; i < 90; i++) {
+      await frames(page, R, DT);
+      const s = await page.evaluate(() => window.__ride.xr.state);
+      if (s.ridesAgain > 0 && s.fade < 0.01) break;
+    }
+    // Back at the start: the afternoon, "Summer Cycle", ghost hands settling onto the grips.
+    await frames(page, R, 3.6);
+  });
+  const sAgain = await state(page);
+  if (!(sAgain.ridesAgain === 1 && sAgain.step === "hold" && sAgain.sun < 0.05)) errors.push(`Ride again did not restart the ride (${JSON.stringify(sAgain)})`);
+  console.log("states", JSON.stringify({ sGrab: sGrab.step, sBrake: sBrake.step, sBell: sBell.step, sSun: [sSun.step, sSun.sun], menuLesson, sMenu: [sMenu.step, sMenu.paused], sComfort: sComfort.step, end: [sEnd.step, sEnd.end], again: [sAgain.step, sAgain.ridesAgain, sAgain.hint] }));
+  if (menuLesson?.step !== "menu" || menuLesson.t > 10) errors.push(`the menu lesson was not up for the palm (${JSON.stringify(menuLesson)})`);
+  await page.close();
+}
+
+// ------------------------------------------------------------------ a clean ride: steering, hands lost
+
+/**
+ * The ride once the lessons are done (no lesson cards or ghost hands): steering gently through the
+ * village and the shop row, then both hands dropping into the lap mid-ride, out of view: the bike
+ * coasts and a card at eye height says so, until the hands come back.
+ */
+async function steer() {
+  const page = await open("xremu=hands&xrtier=quest&xradapt=0&fs=0");
+  const R = rig();
+  await page.evaluate((p) => {
+    for (const s of ["left", "right"]) window.__xrdev.hands[s].position.set(...p[s]);
+    window.__startManual();
+  }, RAW_LAP);
+  await frames(page, R, 1.0);
+  await page.click("#xr-enter");
+  for (let i = 0; i < 90 && !(await page.evaluate(() => window.__ride.xr.state.presenting)); i++) await frames(page, R, DT);
+  await frames(page, R, 0.2);
+  await page.evaluate(() => window.__ride.xr.mode.session.recenter());
+  await frames(page, R, 0.3);
+  for (const s of ["left", "right"]) {
+    Q[s === "left" ? "gripL" : "gripR"] = await page.evaluate((s) => window.__reelPalmTo(s, [s === "left" ? 0.15 : -0.15, -1, -0.35]), s);
+    R[s].quat.go(Q[s === "left" ? "gripL" : "gripR"], 0.01, R.T);
+  }
+  R.left.pos.go(GRIP.left, 1.2, R.T, 0.04);
+  R.right.pos.go(GRIP.right, 1.2, R.T, 0.04);
+  await frames(page, R, 2.0);
+  // Past the lessons: riding on to the shrine, its card already read (it fades out).
+  await page.evaluate(() => {
+    const g = window.__ride.xr.mode.guide;
+    g.step = "ride";
+    g.t = 6.2;
+  });
+  await frames(page, R, 2.4);
+
+  await clip("03-steering-through-village", async () => {
+    const steer = async (deg, dur, hold) => {
+      const [l, r] = bars(deg);
+      R.left.pos.go(l, dur, R.T);
+      R.right.pos.go(r, dur, R.T);
+      await frames(page, R, hold);
+    };
+    R.yaw.go(-12, 3.5, R.T);
+    await steer(-5, 1.6, 2.6);
+    await steer(4, 2.0, 2.4);
+    R.yaw.go(10, 4, R.T);
+    await steer(7, 1.8, 2.6);
+    R.yaw.go(-8, 3, R.T);
+    await steer(-3, 1.8, 2.4);
+    R.yaw.go(0, 2.4, R.T);
+    await steer(0, 1.4, 2.2);
+  });
+
+  await frames(page, R, 0.6);
+  let lost = null;
+  await clip("12-hands-lost-coast", async () => {
+    await frames(page, R, 0.8);
+    // Both hands let go of the bars and drop into the lap, out of view.
+    R.pitch.go(-11, 1.2, R.T);
+    for (const s of ["left", "right"]) R[s].pos.go(LAP[s], 0.9, R.T, 0.01);
+    await frames(page, R, 0.9);
+    // Out of the cameras' sight, tracking drops them (as it does on a Quest with hands in the lap).
+    await page.evaluate(() => {
+      for (const s of ["left", "right"]) window.__xrdev.hands[s].connected = false;
+    });
+    for (const s of ["left", "right"]) {
+      R[s].raw = true;
+      R[s].pos = new Track(RAW_LAP[s]);
+    }
+    await frames(page, R, 3.4);
+    lost = await state(page);
+    // Hands back up in front: found again (the card clears, the grip rings invite them back).
+    await page.evaluate(() => {
+      for (const s of ["left", "right"]) window.__xrdev.hands[s].connected = true;
+    });
+    await frames(page, R, 0.2);
+    for (const s of ["left", "right"]) {
+      R[s].raw = false;
+      R[s].pos = new Track((await page.evaluate((s) => window.__reelLocal(s, "palm"), s)) ?? LAP[s]);
+      R[s].pos.go(GRIP[s], 1.2, R.T, 0.04);
+    }
+    R.pitch.go(-15, 1.2, R.T);
+    await frames(page, R, 2.4);
+  });
+  const back = await state(page);
+  console.log("steer states", JSON.stringify({ lost: [lost?.notice, lost?.speed], back: [back.notice, back.held] }));
+  if (lost?.notice !== "lost") errors.push(`the hands-lost card did not show (${JSON.stringify(lost)})`);
   await page.close();
 }
 
@@ -789,7 +986,7 @@ async function encodeAll() {
   }
 }
 
-if (!["all", "ride", "desktop", "stereo", "audio", "encode", "gallery", "hero"].includes(ONLY)) throw new Error(`--only=${ONLY}?`);
+if (!["all", "ride", "steer", "desktop", "stereo", "audio", "encode", "gallery", "hero"].includes(ONLY)) throw new Error(`--only=${ONLY}?`);
 try {
   if (ONLY === "gallery") {
     await ride();
@@ -797,6 +994,7 @@ try {
   }
   if (GALLERY) await hero();
   if (ONLY === "all" || ONLY === "ride") await ride();
+  if (ONLY === "all" || ONLY === "steer") await steer();
   if (ONLY === "all" || ONLY === "desktop") await desktop();
   if (ONLY === "all" || ONLY === "stereo") await stereo();
   if (ONLY !== "audio" && !GALLERY) await encodeAll();
