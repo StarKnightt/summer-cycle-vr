@@ -51,12 +51,22 @@ try {
     const bike = window.__ride.bike.group;
     const proxies = find("xr-proxies");
     const basic = new window.__THREE.MeshBasicMaterial({ color: 0x888888 });
+    let look = null;
+    s.traverse((o) => (look ??= o.material?.uniforms?.uXRLook ?? null));
+    const dome = sky.children.find((d) => d.geometry?.type === "SphereGeometry");
+    const clouds = sky.children.filter((d) => d.material?.uniforms?.aLobe === undefined && /aLobe/.test(d.material?.vertexShader ?? ""));
+    const hills = sky.children.filter((d) => d.material?.uniforms?.uId?.value === 15);
+    const hide = (list) => [() => list.forEach((o) => (o.visible = false)), () => list.forEach((o) => (o.visible = true))];
     window.__ab = {
       base: [() => {}, () => {}],
       "no sky/clouds/hills": [() => (sky.visible = false), () => (sky.visible = true)],
       "no chunks (ground, houses, poles)": [() => (chunks.visible = false), () => (chunks.visible = true)],
       "no proxies (trees, grass, flowers)": [() => (proxies.visible = false), () => (proxies.visible = true)],
       "no bike": [() => (bike.visible = false), () => (bike.visible = true)],
+      "no sky dome": hide([dome]),
+      "no clouds": hide(clouds),
+      "no ridges": hide(hills),
+      "no headset ink (uXRLook 0)": [() => look && (look.value = 0), () => look && (look.value = 1)],
       "flat material everywhere": [() => (s.overrideMaterial = basic), () => (s.overrideMaterial = null)],
     };
     const fb = rd.xr.getRenderTarget?.() ?? null;

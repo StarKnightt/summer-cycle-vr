@@ -5,6 +5,60 @@ Summer Cycle existed before the Meta VR Start Developer Competition 2026 as a de
 during the competition window, from 27 September 2026, on the `webxr-hands` branch. It is the
 "significant update" for the Adapted / Significantly Updated Experience division.
 
+## 2026-10-26: Quest frame rate
+
+A forum playtest on a Quest 3S read 50 fps with 210 draw calls at L3, the lightest level, so the
+ladder's bottom was not light enough. Profiling the headset frame in the emulator showed the
+JavaScript side was mostly work on things nobody sees, and that per-pixel shading dominates the GPU
+side (one flat material everywhere takes the headset render from 4.4 ms to 0.55 ms).
+
+### CPU
+- **The hidden rider**: on the Quest tier her body is not drawn and casts no shadow, but her pose,
+  ponytail springs and skirt drape (rebuilt with normals on the CPU) still ran every frame, and the
+  renderer walked her ~285 nodes twice. In the headset her body now leaves the scene graph and the
+  pose is skipped; only the bike, basket and bouquet update.
+- **Fixed matrices for the scenery**: nothing moves inside a chunk, so chunk contents keep fixed
+  local matrices and chunk roots re-matrix only when the road wraps. Matrices recomposed per frame:
+  714 -> 151; scene graph nodes: 837 -> 595.
+
+### Draws and pixels (Quest tier only; the desktop is unchanged)
+- 11 clouds -> 4 sky quarters, frustum-culled (behind the player they are skipped); 5 ridge rings
+  -> 2 draws. Exact: the cloud shader's lobe centres move with the merged geometry.
+- `XR_CHEAP`, compiled into the Quest-tier shaders like the headset ink: one brush-stroke octave
+  instead of two, two ground noise octaves (plus the mean of the other two) instead of four, and
+  smooth leaf cells instead of the 9-tap cellular lookup on the lobed trees. `?xrcheap=0` keeps the
+  full shading for comparison.
+- Framebuffer scale 0.85 -> 0.8 on Quest (11% fewer pixels). Quest 2 and older (named in Quest
+  Browser's user agent) start at 0.72 and at L2, without the sun shadow.
+
+### Adaptive safety net
+- **L4**: shorter detail radii and an 80 m view after L3.
+- **Memory**: a headset still under 65 fps at L4 is remembered (localStorage), and its next session
+  starts with a smaller framebuffer (x0.88, then x0.76) and without the sun shadow; a long session
+  that never left its start level gives one step back. three.js fixes the framebuffer scale for a
+  session, so this is the only way to lower it. `?xrmem=0` ignores it, `?xrstart=0..4` picks
+  the start level.
+- The `?xrfps=1` readout names the level and the framebuffer scale (`L0 x0.80`), for playtest reports.
+
+### Measured (IWER emulator, Quest tier, desktop CPU and GPU: proxies, not Quest numbers)
+| | Before | After |
+|---|---|---|
+| Draw calls per frame (both eyes), shop row, L0 / L3 | 226 / 196 | 200 / 170 |
+| Triangles per frame, shop row, L0 / L3 | 661k / 511k | 613k / 463k |
+| Sky (dome + clouds) per frame | 24 calls, 82k tris | 4 calls, 34k tris |
+| JavaScript per headset frame, mean of 5 spots, L0 / L3 | 1.80 / 1.84 ms | 1.14 / 0.86 ms |
+| Same with 4x CPU throttling (mobile CPU stand-in), L0 / L3 | 10.5 / 11.0 ms | 6.1 / 4.4 ms |
+
+- `scripts/xr-shots.mjs` passes 14/14 + 9/9 at the default level and with L4 pinned, no shader
+  compiles in the session, no console errors; `scripts/xr-adapt.mjs` 9/9 (the heavy simulated
+  cost now steps to L4 and is flagged as struggling); `scripts/explore.mjs` passes on the desktop.
+- New tools: `scripts/xr-cost.mjs` (JS and GPU time per headset frame, optional CPU throttling),
+  `scripts/xr-cpuprof.mjs` (V8 profile of the headset frame), `scripts/xr-gpu-ab.mjs` (GPU time
+  with parts of the scene hidden).
+- Not measured on a headset. Dynamic viewport scaling (`XRView.requestViewportScale`) would lower
+  the resolution mid-session, but how Quest Browser composites it with three.js's projection
+  layer can't be checked without one, so it is not used.
+
 ## 2026-10-06: The headset look, hands-only lessons and an ending
 
 ### A drawn look without the post chain

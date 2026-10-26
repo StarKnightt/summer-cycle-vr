@@ -14,9 +14,10 @@ export interface Level {
 }
 
 /**
- * The ladder, lightest last. L0 is the tier the session starts on (Quest default or xrlite); the
- * framebuffer scale can't change mid-session, so the steps trade detail radii, shadow cadence,
- * view distance and grass density instead.
+ * The ladder, lightest last. L0 is the full tier (Quest default or xrlite); a session may start
+ * lower (Quest 2, or a headset that struggled before). The framebuffer scale can't change
+ * mid-session, so the steps trade detail radii, shadow cadence, view distance and grass density;
+ * a headset still under the target at L4 gets a smaller framebuffer next session (Memory).
  */
 export function levels(base: { radii: ProxyRadii; shadowEvery: number; shadow: boolean; far: number; foveation: number }): Level[] {
   return [

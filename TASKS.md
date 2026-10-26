@@ -38,6 +38,8 @@ The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Ver
 - [x] Headset look: ink without a post pass (contour lines + per-corner hard edges on houses, street furniture and fences), sun glow, sky wash, output dither (2026-10-06)
 - [x] Hands-only lessons with ghost hands, menu lesson, hands lost / found card and cues, end card with Ride again / Ride on (2026-10-06)
 - [x] Fix: every headset frame ran twice (window loop restarted by setAnimationLoop after sessionstart); fix: hands trailed the bike by one frame
+- [x] Quest frame rate pass after the forum's 50 fps at L3 on a Quest 3S (2026-10-26): hidden rider out of the headset frame, fixed chunk matrices, merged clouds / ridges, XR_CHEAP shading, 0.8 framebuffer, Quest 2 start, L4 + per-headset memory
+- [ ] Retest on a real Quest 3S / Quest 2 with `?xrfps=1` (forum tester asked; readout now shows level and scale)
 - [ ] On a real Quest: does Quest Browser fire window rAF during an immersive session? (if it did, the double frame loop was costing a second render per frame there too)
 - [ ] Demo video from the emulator (scripted hands), Devpost write-up
 - [ ] Re-capture the demo clips (`scripts/xr-reel.mjs`) and re-cut the video: the footage in media/xr-reel predates the new look, lessons and ending
