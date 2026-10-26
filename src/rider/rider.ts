@@ -1871,6 +1871,11 @@ export class Rider {
   setXrView(on: boolean, shadow = true): void {
     if (on === this.xrView) return;
     this.xrView = on;
+    if (!on && this.parked.length) {
+      for (const c of this.parked) this.lean.add(c);
+      this.parked = [];
+      for (const h of this.gripHands) h.visible = !this.onFoot;
+    }
     const set = (o: THREE.Object3D) =>
       o.traverse((c) => {
         if (on && !shadow) c.layers.disable(LAYER_SHADOW);
@@ -1880,6 +1885,13 @@ export class Rider {
       });
     for (const c of this.lean.children) if (c !== this.bike.group) set(c);
     for (const h of this.gripHands) set(h);
+    if (on && !shadow) {
+      // Nothing of her is drawn at all: take her out of the scene graph (a few hundred nodes the
+      // renderer would otherwise walk and re-matrix twice a frame) and skip her pose (see update).
+      this.parked = this.lean.children.filter((c) => c !== this.bike.group);
+      for (const c of this.parked) this.lean.remove(c);
+      for (const h of this.gripHands) h.visible = false;
+    }
     if (!on) {
       // Hand back to the first-person state the chase camera asks for next.
       const [fp, arms] = [this.fppOn, this.fppArms];
@@ -1888,6 +1900,8 @@ export class Rider {
     }
   }
   private xrView = false;
+  /** Her body while the headset draws none of her (detached from `lean`). */
+  private parked: THREE.Object3D[] = [];
 
   /** Hide head/hair (first-person view) or show them. */
   setFirstPerson(on: boolean, arms = on): void {
@@ -1947,6 +1961,10 @@ export class Rider {
     const fb = f ? Math.min(1, Math.max(0, f.blend)) : 0;
     this.setOnFoot(fb > 0);
     this.root.updateMatrixWorld(true);
+    if (this.parked.length) {
+      this.springBouquet(dt, s);
+      return;
+    }
     const P = this.poseA;
     this.ridePose(s, P);
     let stand = 0;
@@ -2026,18 +2044,20 @@ export class Rider {
     }
     for (const e of this.eyes) e.scale.y = 1 - 0.9 * lid;
     this.swayFringe(dt, s.time, f && fb > 0 ? f.speed : s.speed);
-    // Bouquet: a light spring nodding back with speed, swinging with steering and bumps.
-    {
-      const b = this.bq, sp = Math.abs(s.speed);
-      const tx = -0.05 - Math.min(sp, 8) * 0.018 + Math.sin(s.time * 2.1) * 0.03 * Math.min(1, sp / 3);
-      const tz = -s.steer * 0.25 + Math.sin(s.time * 3.3 + 1) * 0.025 * Math.min(1, sp / 3);
-      const h = Math.min(dt, 1 / 30);
-      b.vx += ((tx - b.x) * 90 - b.vx * 7) * h;
-      b.vz += ((tz - b.z) * 90 - b.vz * 7) * h;
-      b.x += b.vx * h;
-      b.z += b.vz * h;
-      this.bouquet.rotation.set(b.x, 0, b.z);
-    }
+    this.springBouquet(dt, s);
+  }
+
+  /** Bouquet: a light spring nodding back with speed, swinging with steering and bumps. */
+  private springBouquet(dt: number, s: RiderState): void {
+    const b = this.bq, sp = Math.abs(s.speed);
+    const tx = -0.05 - Math.min(sp, 8) * 0.018 + Math.sin(s.time * 2.1) * 0.03 * Math.min(1, sp / 3);
+    const tz = -s.steer * 0.25 + Math.sin(s.time * 3.3 + 1) * 0.025 * Math.min(1, sp / 3);
+    const h = Math.min(dt, 1 / 30);
+    b.vx += ((tx - b.x) * 90 - b.vx * 7) * h;
+    b.vz += ((tz - b.z) * 90 - b.vz * 7) * h;
+    b.x += b.vx * h;
+    b.z += b.vz * h;
+    this.bouquet.rotation.set(b.x, 0, b.z);
   }
 
   /** 0 seated … 1 standing (how far the dismount has got). */

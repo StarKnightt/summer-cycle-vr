@@ -36,12 +36,23 @@ export class Sky {
       [-2.6, 1500, 190, 0.9],
       [3.14, 1600, 170, 0.8],
     ];
+    const sectors: THREE.BufferGeometry[][] = [[], [], [], []];
     for (const [az, dist, size, tall] of spots) {
       const g = cumulus(size, tall, Math.floor(r() * 1e6));
       const m = new THREE.Mesh(g, cm);
       m.position.set(Math.sin(az) * dist, range(r, 110, 150), -Math.cos(az) * dist);
       m.rotation.y = r() * 6.28;
       m.frustumCulled = false;
+      if (QUEST) {
+        // Headset: one draw per quarter of the sky, culled when it is behind the player.
+        m.updateMatrix();
+        sectors[((Math.round(az / (Math.PI / 2)) % 4) + 4) % 4].push(bakeCloud(g, m.matrix));
+      } else this.group.add(m);
+    }
+    for (const parts of sectors) {
+      if (!parts.length) continue;
+      const m = new THREE.Mesh(mergeGeometries(parts, false)!, cm);
+      m.geometry.computeBoundingSphere();
       this.group.add(m);
     }
 
@@ -54,11 +65,25 @@ export class Sky {
       [1350, 235, 3, "#90aec2", M.distant],
       [1900, 390, 6, "#b3c8d6", M.distant],
     ];
+    const ridges: THREE.BufferGeometry[][] = [[], []];
     layers.forEach(([rad, h, s, color, mat], i) => {
       const g = ridge(rad, h, s * 13 + 5, color, mat, i < 2, i === 4);
+      // Headset: the rings that share a material draw as one (near ones first, for early z).
+      if (QUEST) return void ridges[i < 2 ? 0 : 1].push(g);
       const m = new THREE.Mesh(g, uber(ID.hills, i < 2 ? 0.5 : 0.0, THREE.DoubleSide));
       m.frustumCulled = false;
       this.group.add(m);
+    });
+    ridges.forEach((parts, j) => {
+      if (!parts.length) return;
+      const names = Object.keys(parts[0].attributes).sort().join();
+      const same = parts.every((p) => Object.keys(p.attributes).sort().join() === names && !!p.index === !!parts[0].index);
+      const geos = same ? [mergeGeometries(parts, false)!] : parts;
+      for (const g of geos) {
+        const m = new THREE.Mesh(g, uber(ID.hills, j === 0 ? 0.5 : 0.0, THREE.DoubleSide));
+        m.frustumCulled = false;
+        this.group.add(m);
+      }
     });
 
     const disc = new THREE.Mesh(prep(new THREE.CircleGeometry(2400, 48).rotateX(-Math.PI / 2), "#3f7a36", M.ground), uber(ID.ground, 0));
@@ -86,6 +111,21 @@ export class Sky {
   follow(cam: THREE.Vector3): void {
     this.group.position.set(cam.x, 0, cam.z);
   }
+}
+
+/**
+ * A cumulus in sky-group space for merging: positions, normals and its lobe centres (the cloud
+ * shader shades from `position - aLobe`, so both move together and the lighting is unchanged).
+ */
+function bakeCloud(g: THREE.BufferGeometry, m: THREE.Matrix4): THREE.BufferGeometry {
+  const out = g.clone().applyMatrix4(m);
+  const lobe = out.attributes.aLobe as THREE.BufferAttribute;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < lobe.count; i++) {
+    v.fromBufferAttribute(lobe, i).applyMatrix4(m);
+    lobe.setXYZ(i, v.x, v.y, v.z);
+  }
+  return out;
 }
 
 /** Cauliflower cumulus: flat floor, heaped towers, crisp secondary lobes; normals partly spherized. */

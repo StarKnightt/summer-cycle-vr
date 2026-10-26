@@ -28,6 +28,8 @@ export class XRRide {
   presenting = false;
   visible = true;
   supported = false;
+  /** Multiplies the tier's framebuffer scale from the next session on (adaptive memory). */
+  scaleK = 1;
   private session: XRSession | null = null;
   private calibrate = 0;
 
@@ -62,6 +64,8 @@ export class XRRide {
     if (this.presenting || this.session) return;
     const xr = navigator.xr;
     if (!xr) return;
+    // Read by three.js when the session starts, and fixed until it ends.
+    this.renderer.xr.setFramebufferScaleFactor(this.opts.framebufferScale * this.scaleK);
     let s: XRSession;
     try {
       s = await xr.requestSession("immersive-vr", { optionalFeatures: ["hand-tracking", "layers"] });

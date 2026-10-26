@@ -999,6 +999,12 @@ export class World {
 
   addChunk(k: number): void {
     const c = buildChunk(k);
+    // Scenery never moves inside its chunk (update() only moves the chunk root): fixed local
+    // matrices spare the renderer recomposing a few hundred of them every frame.
+    c.group.traverse((o) => {
+      o.updateMatrix();
+      o.matrixAutoUpdate = false;
+    });
     this.chunks.push(c);
     this.root.add(c.group);
   }
@@ -1024,7 +1030,10 @@ export class World {
     for (const c of this.chunks) {
       const zc = -(c.k + 0.5) * CHUNK;
       const n = Math.ceil((zc - top) / L);
-      c.group.position.z = -n * L;
+      if (c.group.position.z !== -n * L) {
+        c.group.position.z = -n * L;
+        c.group.updateMatrix();
+      }
       // Distance from the player to the chunk's nearest edge drives its level of detail.
       const z0 = -c.k * CHUNK - n * L, z1 = z0 - CHUNK;
       const d = pz < z1 ? z1 - pz : pz > z0 ? pz - z0 : 0;

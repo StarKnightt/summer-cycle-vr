@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { TOD, TOD_GLSL } from "./todUniforms";
-import { QUEST } from "../xr/tier";
+import { QUEST, XR_CHEAP } from "../xr/tier";
 
 /**
  * Every visible surface uses one of the custom toon materials below. They all render into a
@@ -127,7 +127,12 @@ float brush(vec3 wp, vec3 n){
   // Band-limited by pixel footprint: stroke octaves fade to their mean before they can alias.
   float fp = length(wp - cameraPosition) * 0.0011;
   float k1 = 1.0 - smoothstep(0.25, 0.6, fp * 6.0), k2 = 1.0 - smoothstep(0.25, 0.6, fp * 13.0);
+#ifdef XR_CHEAP
+  // Headset: the broad stroke octave only (the fine one is a few pixels wide at headset density).
+  return 0.5 + (vnoise(q * vec2(1.1, 6.0)) - 0.5) * 0.6 * k1;
+#else
   return 0.5 + (vnoise(q * vec2(1.1, 6.0)) - 0.5) * 0.6 * k1 + (vnoise(q * vec2(2.3, 13.0)) - 0.5) * 0.4 * k2;
+#endif
 }
 
 // Toon-thresholded shadow map: 1 = sunlit, 0 = in shadow. Canopy shadows get sun flecks.
@@ -479,7 +484,12 @@ void main(){
       jit = ((n1 - 0.5) * 0.8 + (n2 - 0.5) * 0.3) * mix(1.0, 0.6, nearK);
       leafHi = smoothstep(0.62, 0.9, n2) * 0.6;
     } else {
+#ifdef XR_CHEAP
+      // Headset: smooth cells instead of the 9-tap cellular lookup (the atlas leaves carry the detail).
+      vec2 c = vec2(0.5 + (vnoise(p * 1.3 + 3.1) - 0.5) * 0.6, vnoise(p * 1.1));
+#else
       vec2 c = cellular(p);
+#endif
       jit = ((c.y - 0.5) * 0.7 + (n2 - 0.5) * 0.3 - smoothstep(0.5, 0.95, c.x) * 0.3) * mix(1.0, 0.6, nearK);
       leafHi = smoothstep(0.62, 0.9, n2) * (1.0 - smoothstep(0.3, 0.8, c.x));
       // Canopy surface painted with atlas leaves in two overlapping world-space layers (textureGrad
@@ -584,7 +594,13 @@ void main(){
     if (gAlpha < 0.03) discard;
     paint = 0.0; rim = 0.4; soft = 0.02;
   } else if ((HAS(11) && mt == 11)) {    // ground: grass meadow paint
+#ifdef XR_CHEAP
+    // Headset: the two broad octaves, plus the mean of the two fine ones.
+    vec2 gp = vWPos.xz * 0.11;
+    float n = 0.5 * vnoise(gp) + 0.25 * vnoise(gp * 2.03 + 17.1) + 0.094;
+#else
     float n = fbm2(vWPos.xz * 0.11);
+#endif
     float fl = hash12(floor(vWPos.xz * 2.3));
     base *= 0.82 + 0.36 * n;
     base = mix(base, base * vec3(1.2, 1.2, 0.8), step(0.93, fl) * 0.5);
@@ -753,7 +769,7 @@ export function uberWith(id: number, mask: number, extra: Record<string, THREE.I
  * materials that differ only in their mask share one program, and splitting them costs more.
  */
 function inkDefines(_mask: number): Record<string, string> {
-  return QUEST ? { XR_INK: "" } : {};
+  return QUEST ? (XR_CHEAP ? { XR_INK: "", XR_CHEAP: "" } : { XR_INK: "" }) : {};
 }
 
 /** Geometry without `aEdge` (see edges.ts) must read zeros: attribute slots are shared between programs. */

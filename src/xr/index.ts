@@ -15,9 +15,9 @@ import { WristMenu } from "./menu";
 import { FpsMeter, Vignette } from "./comfort";
 import { Guide } from "./guide";
 import { INK, Panel, text, washiCard } from "./ui";
-import { XR_TIER } from "./tier";
+import { XR_TIER, SCALE_STEPS } from "./tier";
 import { Proxies } from "./proxies";
-import { Adaptive, levels } from "./adaptive";
+import { Adaptive, levels, loadMemory, saveMemory, type Memory } from "./adaptive";
 import { SunGlow, XR_LOOK } from "./look";
 import { GhostHands, type Hint } from "./ghost";
 import { EndCard, Fade } from "./ending";
@@ -88,6 +88,8 @@ export class XRMode {
   readonly proxies: Proxies;
   readonly adaptive: Adaptive;
   private adaptiveOn = true;
+  private memory: Memory;
+  private startLevel = 0;
   /** Sun shadow cadence for the current quality level (0 = off). */
   private shadowEvery: number = XR_TIER.shadow ? XR_TIER.shadowEvery : 0;
   /** Sun shadow strength, easing toward on / off over about a second (stale map meanwhile). */
@@ -170,12 +172,15 @@ export class XRMode {
     this.session.rig.add(this.pauseCard.mesh);
     this.session.rig.visible = this.worldGroup.visible = false;
     this.proxies = new Proxies(d.world, XR_TIER.radii);
+    this.memory = XR_TIER.memory ? loadMemory() : { step: 0, start: 0 };
+    this.session.scaleK = SCALE_STEPS[Math.min(this.memory.step, SCALE_STEPS.length - 1)];
     this.adaptive = new Adaptive(levels(XR_TIER), (l) => {
       this.proxies.setDetail(l.radii, l.thin);
       d.world.setDetail(XR_TIER.cullK, l.far, XR_TIER.treeFar);
       this.shadowEvery = l.shadowEvery;
       renderer.xr.setFoveation(l.foveation);
-      this.fps.level = l.name;
+      // The readout names the level and the framebuffer scale, for playtest reports.
+      this.fps.level = `${l.name} x${(XR_TIER.framebufferScale * this.session.scaleK).toFixed(2)}`;
       this.fps.panel.redraw();
       this.menu.refresh();
     });
@@ -211,7 +216,8 @@ export class XRMode {
     this.proxies.setActive(true);
     // Judge against 72 Hz at most: a Quest running at 90 or 120 still clears the 60 fps bar.
     const hz = Math.min(72, renderer_frameRate(d.renderer) ?? XR_TIER.frameRate);
-    this.adaptive.reset(0, hz);
+    this.startLevel = Math.min(this.adaptive.ladder.length - 1, Math.max(XR_TIER.startLevel, this.memory.start));
+    this.adaptive.reset(this.startLevel, hz);
     this.proxies.snap();
     this.shadowK = this.shadowEvery ? 1 : 0;
     REFL.uReflOn.value = 0;
@@ -227,7 +233,29 @@ export class XRMode {
     d.onStart();
   }
 
+  /**
+   * After a session: a headset still under the target at the lightest level starts the next one
+   * with a smaller framebuffer and without the sun shadow; a long session that never left its start
+   * level gives one step back.
+   */
+  private learn(): void {
+    if (!XR_TIER.memory || !this.adaptiveOn) return;
+    const m = { ...this.memory }, a = this.adaptive;
+    if (a.struggling) {
+      m.step = Math.min(m.step + 1, SCALE_STEPS.length - 1);
+      m.start = Math.max(m.start, 2);
+    } else if (a.sessionT >= 45 && a.deepest <= this.startLevel && (m.step > 0 || m.start > 0)) {
+      if (m.step > 0) m.step--;
+      else m.start = 0;
+    }
+    if (m.step === this.memory.step && m.start === this.memory.start) return;
+    this.memory = m;
+    saveMemory(m);
+    this.session.scaleK = SCALE_STEPS[m.step];
+  }
+
   private end(): void {
+    this.learn();
     const d = this.d;
     this.session.rig.visible = this.worldGroup.visible = false;
     d.rider.setXrView(false);
@@ -491,6 +519,7 @@ export class XRMode {
       calls: this.fps.calls,
       shadowCalls: this.shadowCalls,
       level: this.adaptive.current.name,
+      scale: XR_TIER.framebufferScale * this.session.scaleK,
       levelFps: Math.round(this.adaptive.fps),
       target: this.adaptive.target,
       hint: this.ghost.showing,
