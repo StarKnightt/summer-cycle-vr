@@ -57,6 +57,30 @@ const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=d3d11", "--use-gl=angle", "--enable-gpu", "--ignore-gpu-blocklist", "--force_high_performance_gpu", "--hide-scrollbars", "--mute-audio", "--autoplay-policy=no-user-gesture-required"],
 });
+// Teardown on every exit path, so a throw or Ctrl+C never leaves headless Chromium running.
+const bye = async (code, why) => {
+  if (why) console.error("[teardown]", why);
+  try { await browser.close(); } catch {}
+  process.exit(code);
+};
+process.on("SIGINT", () => bye(130, "interrupted"));
+process.on("SIGTERM", () => bye(143, "terminated"));
+process.on("uncaughtException", (e) => bye(1, e));
+process.on("unhandledRejection", (e) => bye(1, e));
+
+// Assert the discrete GPU: a software rasteriser would silently change the footage.
+{
+  const p = await browser.newPage();
+  const gpu = await p.evaluate(() => {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    const d = gl?.getExtension("WEBGL_debug_renderer_info");
+    return d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : "unknown";
+  });
+  await p.close();
+  console.log("[gpu]", gpu);
+  if (/swiftshader|llvmpipe|software|basic render/i.test(gpu) && !argv.includes("--allow-software")) await bye(1, `CPU rasteriser: ${gpu}`);
+}
+
 const errors = [];
 const durations = {};
 
@@ -980,7 +1004,7 @@ async function encodeAll() {
   for (const name of dirs) {
     const src = path.join(FRAMES, name, "f%05d.jpg");
     const dst = path.join(OUT, `${name}.mp4`);
-    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", src, "-vf", "scale=in_range=pc:out_range=tv,format=yuv420p", "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p", "-color_range", "tv", "-movflags", "+faststart", dst]);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", src, "-vf", "scale=in_range=pc:out_range=tv,format=yuv420p", "-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", "17", "-b:v", "0", "-pix_fmt", "yuv420p", "-color_range", "tv", "-movflags", "+faststart", dst]);
     const st = await fs.stat(dst);
     console.log(`encoded ${name}.mp4 ${(st.size / 1e6).toFixed(1)} MB`);
   }
