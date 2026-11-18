@@ -5,6 +5,20 @@ Summer Cycle existed before the Meta VR Start Developer Competition 2026 as a de
 during the competition window, from 27 September 2026, on the `webxr-hands` branch. It is the
 "significant update" for the Adapted / Significantly Updated Experience division.
 
+## 2026-11-18: Quest 3 playtest fixes
+
+A forum playtest on a Quest 3 (min 63 / avg ~70 fps) raised two comfort issues.
+
+- **Steering with a hand off the bars**: the wrist menu takes both hands (left palm up, right finger
+  pokes), and one-handed bar angles are noisy, so the bike drifted. Whenever both hands are not on
+  the bars, or the menu is open, the hand steering eases down to 30% and lane keeping eases up to
+  0.9, so the bike holds its line until both hands are back.
+- **Tired arms**: the grips sat 39 cm below the eyes, which holds the arms up and forward. The seated
+  eye point is 8 cm higher, so the grips sit 47 cm below the eyes and the forearms can drop toward
+  the lap. The grips stay in view (~52° below straight ahead).
+
+Emulator walkthrough: 14/14 and 9/9 checks, 0 errors, no shader compiles during the session.
+
 ## 2026-10-26: Quest frame rate
 
 A forum playtest on a Quest 3S read 50 fps with 210 draw calls at L3, the lightest level, so the

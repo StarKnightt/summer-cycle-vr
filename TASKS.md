@@ -40,9 +40,14 @@ The game is live on GitHub Pages (public repo StarKnightt/summer-cycle), the Ver
 - [x] Fix: every headset frame ran twice (window loop restarted by setAnimationLoop after sessionstart); fix: hands trailed the bike by one frame
 - [x] Quest frame rate pass after the forum's 50 fps at L3 on a Quest 3S (2026-10-26): hidden rider out of the headset frame, fixed chunk matrices, merged clouds / ridges, XR_CHEAP shading, 0.8 framebuffer, Quest 2 start, L4 + per-headset memory
 - [ ] Retest on a real Quest 3S / Quest 2 with `?xrfps=1` (forum tester asked; readout now shows level and scale)
+- [x] Quest 3 forum playtest (steve40, 2026-11-15, Navigator v2.10): min 63 / avg ~70 fps, bar grab reliable, bell, menu and sun pinch work, brake untested. Thanked on the forum 2026-11-16
+- [x] From that playtest (2026-11-18): lane keeping holds the line whenever both hands are not on the bars or the menu is open; grips 8 cm lower relative to the eyes (EYE y 1.44 to 1.52). Emulator 14/14 + 9/9, 0 errors. Unconfirmed on a real headset
 - [ ] On a real Quest: does Quest Browser fire window rAF during an immersive session? (if it did, the double frame loop was costing a second render per frame there too)
 - [ ] Demo video from the emulator (scripted hands), Devpost write-up
-- [ ] Re-capture the demo clips (`scripts/xr-reel.mjs`) and re-cut the video: the footage in media/xr-reel predates the new look, lessons and ending
+- [x] Re-capture the demo clips (`scripts/xr-reel.mjs`): all 14 clips re-captured 2026-11-12 on the RTX 4060 (asserted), 0 errors, NVENC
+- [x] Re-cut the video (v4, hands first, `media/xr-reel/VOICEOVER-v4.md`, `scripts/video/build-v4.mjs`): `media/xr-reel/edit/FINAL-v4.mp4`, 2:01, -16 LUFS, peak -1.4 dBFS, every line gap at least 0.5 s (2026-11-14)
+- [x] v4 uploaded to Vimeo (https://vimeo.com/1246826081, public) and swapped into Devpost: video field, project story and the division summary (2026-11-14); entry still SUBMITTED 5/5
+- [x] Deleted the local video files (14 clips, edit/ cache, FINAL-v4, 965 MB) on 2026-11-14; voice take, ride bed, transcript and build script kept, so `scripts/xr-reel.mjs` + `scripts/video/build-v4.mjs` rebuild the cut
 
 ## Remaining
 - [x] Merge `feature/mouse`

@@ -3,9 +3,11 @@ import { XR_OUT } from "./grade";
 
 /**
  * Where the player's eyes sit on the bike (bike space: ground origin, -Z forward): upright over the
- * saddle, far enough back that the grips sit ~45° below straight ahead, inside the headset's view.
+ * saddle, far enough back that the grips sit ~52° below straight ahead, inside the headset's view.
+ * The grips are 47 cm below the eyes: low enough that a seated player's forearms can drop toward the
+ * lap instead of being held up in the air (a Quest 3 playtest found 39 cm tiring on the shoulders).
  */
-export const EYE = new THREE.Vector3(0, 1.44, 0.2);
+export const EYE = new THREE.Vector3(0, 1.52, 0.2);
 
 type Hooks = {
   /** Session is live (the first XR frame follows). */

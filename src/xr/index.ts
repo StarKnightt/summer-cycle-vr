@@ -117,6 +117,8 @@ export class XRMode {
   private moved = new THREE.Matrix4();
   private movedQ = new THREE.Quaternion();
   private rideIn = { ride: false, steer: 0, brake: 0, cruise: 4.2, accel: 0.55, assist: 0.5 };
+  /** 0…1, eased: how far the ride is in "hands loose" lane keeping (not both hands on the bars). */
+  private loose = 1;
 
   constructor(private d: Deps) {
     const { renderer, scene } = d;
@@ -375,11 +377,16 @@ export class XRMode {
     const pace = PACES[this.comfort ? Math.min(this.pace, 0) : this.pace];
     const r = this.rideIn;
     r.ride = this.bars.held[0] || this.bars.held[1];
-    r.steer = this.bars.steer * (this.comfort ? 0.75 : 1);
+    // A hand off the bars (the wrist menu takes both: left palm up, right finger pokes) is not a
+    // request to steer: one-handed bar angles are noisy, so the bike holds its lane instead.
+    const both = this.bars.held[0] && this.bars.held[1];
+    this.loose += ((both && !this.menu.shown ? 0 : 1) - this.loose) * Math.min(1, dt * 3);
+    const base = this.comfort ? 0.55 : 0.3;
+    r.steer = this.bars.steer * (this.comfort ? 0.75 : 1) * (1 - 0.7 * this.loose);
     r.brake = this.bars.brake;
     r.cruise = pace.cruise;
     r.accel = pace.accel;
-    r.assist = this.comfort ? 0.55 : 0.3;
+    r.assist = base + (0.9 - base) * this.loose;
     if (this.arriveT >= 0 && this.arriveT < 7) {
       // The ending: she rolls to a stop at the torii whatever the hands are doing.
       r.ride = false;
